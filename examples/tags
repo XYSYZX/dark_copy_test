@@ -1,0 +1,275 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+CONF_THR	darknet.c	9;"	d	file:
+IMG_NUM	detector.c	9;"	d	file:
+INCLUS_THR	darknet.c	13;"	d	file:
+ITER	darknet.c	14;"	d	file:
+IoU_THR	darknet.c	10;"	d	file:
+MAX_BOX	darknet.c	12;"	d	file:
+MAX_TEST_IMAGE	darknet.c	7;"	d	file:
+NOISE_FREQ	darknet.c	16;"	d	file:
+PROB_DF	darknet.c	11;"	d	file:
+__init__	parseWeights.py	/^    def __init__(self, cfg_path):$/;"	m	class:parse_cfg
+__init__	parseWeights.py	/^    def __init__(self, weights_path):$/;"	m	class:weightLoader
+_get_block	parseWeights.py	/^    def _get_block(self, cfg_path):$/;"	m	class:parse_cfg
+abs_mean	nightmare.c	/^float abs_mean(float *x, int n)$/;"	f
+arr	detector-scipy-opencv.py	/^arr = cv2.imread('data\/dog.jpg')$/;"	v
+arr	detector-scipy-opencv.py	/^arr= imread('data\/dog.jpg')$/;"	v
+array_to_image	detector-scipy-opencv.py	/^def array_to_image(arr):$/;"	f
+average	darknet.c	/^void average(int argc, char *argv[])$/;"	f
+bn	parseWeights.py	/^    def bn(self,filters):$/;"	m	class:weightLoader
+board	go.c	/^    float *board;$/;"	m	struct:mcts_tree	file:
+board_to_string	go.c	/^void board_to_string(char *s, float *board)$/;"	f
+calculate_liberties	go.c	/^static int *calculate_liberties(float *board)$/;"	f	file:
+calculate_loss	nightmare.c	/^void calculate_loss(float *output, float *delta, int n, float thresh)$/;"	f
+cfg	darknet.c	/^const char cfg[] = "cfg\/yolov3-tiny.cfg";   \/\/fix cfg$/;"	v
+check_ko	go.c	/^int check_ko(float *x, float *ko)$/;"	f
+children	go.c	/^    struct mcts_tree **children;$/;"	m	struct:mcts_tree	typeref:struct:mcts_tree::mcts_tree	file:
+close	parseWeights.py	/^    def close(self):$/;"	m	class:weightLoader
+coco_classes	coco.c	/^char *coco_classes[] = {"person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"};$/;"	v
+coco_ids	coco.c	/^int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90};$/;"	v
+coco_ids	detector.c	/^static int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90};$/;"	v	file:
+col	go.c	/^    int col;$/;"	m	struct:__anon2	file:
+compare_board	go.c	/^int compare_board(float *a, float *b)$/;"	f
+compare_detector	detector.c	/^void compare_detector(char *datacfg, char *cfgfile, char *weightfile,  float thresh, float hier_thresh,  char * rf_name, char *imf_name, int max_img, float IoU_thr, float prob_df, int max_box, float max_inclus, int iter_th)$/;"	f
+conv	parseWeights.py	/^    def conv(self, filters, weight_size, batch_normalize):$/;"	m	class:weightLoader
+conv_par	parseWeights.py	/^    def conv_par(self, block):$/;"	m	class:parse_cfg
+copy_board	go.c	/^float *copy_board(float *board)$/;"	f
+csv_classifier	classifier.c	/^void csv_classifier(char *datacfg, char *cfgfile, char *weightfile)$/;"	f
+data	go.c	/^    char **data;$/;"	m	struct:__anon1	file:
+dec2fp	test.py	/^def dec2fp(x, e_bit=8, f_bit=23):$/;"	f
+demo_art	art.c	/^void demo_art(char *cfgfile, char *weightfile, int cam_index)$/;"	f
+demo_classifier	classifier.c	/^void demo_classifier(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename)$/;"	f
+demo_isegmenter	instance-segmenter.c	/^void demo_isegmenter(char *datacfg, char *cfg, char *weights, int cam_index, const char *filename)$/;"	f
+demo_regressor	regressor.c	/^void demo_regressor(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename)$/;"	f
+demo_segmenter	segmenter.c	/^void demo_segmenter(char *datacfg, char *cfg, char *weights, int cam_index, const char *filename)$/;"	f
+denormalize_net	darknet.c	/^void denormalize_net(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+detect2	detector-scipy-opencv.py	/^def detect2(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):$/;"	f
+dice_labels	dice.c	/^char *dice_labels[] = {"face1","face2","face3","face4","face5","face6"};$/;"	v
+done	go.c	/^    int done;$/;"	m	struct:mcts_tree	file:
+engine_go	go.c	/^void engine_go(char *filename, char *weightfile, int mcts_iters, float secs, float temp, float cpuct, int anon, int resign)$/;"	f
+eval_cifar_csv	cifar.c	/^void eval_cifar_csv()$/;"	f
+expand	go.c	/^mcts_tree *expand(float *next, float *ko, network *net)$/;"	f
+extend_data_truth	attention.c	/^void extend_data_truth(data *d, int n, float val)$/;"	f
+extract_cifar	cifar.c	/^void extract_cifar()$/;"	f
+extract_voxel	voxel.c	/^void extract_voxel(char *lfile, char *rfile, char *prefix)$/;"	f
+fgetgo	go.c	/^char *fgetgo(FILE *fp)$/;"	f
+file_output_classifier	classifier.c	/^void file_output_classifier(char *datacfg, char *filename, char *weightfile, char *listfile)$/;"	f
+fix_data_captcha	captcha.c	/^void fix_data_captcha(data d, int mask)$/;"	f
+flip_board	go.c	/^void flip_board(float *board)$/;"	f
+float_pair	rnn.c	/^} float_pair;$/;"	t	typeref:struct:__anon3	file:
+float_pair	rnn_vid.c	/^} float_pair;$/;"	t	typeref:struct:__anon4	file:
+fp2dec	test.py	/^def fp2dec(x, e_bit=8, f_bit=23):$/;"	f
+free_mcts	go.c	/^void free_mcts(mcts_tree *root)$/;"	f
+generate_vid_rnn	rnn_vid.c	/^void generate_vid_rnn(char *cfgfile, char *weightfile)$/;"	f
+get_coco_image_id	coco.c	/^int get_coco_image_id(char *filename)$/;"	f
+get_coco_image_id	detector.c	/^static int get_coco_image_id(char *filename)$/;"	f	file:
+get_regression_values	classifier.c	/^float *get_regression_values(char **labels, int n)$/;"	f
+get_rnn_data	rnn.c	/^float_pair get_rnn_data(unsigned char *text, size_t *offsets, int characters, size_t len, int batch, int steps)$/;"	f
+get_rnn_token_data	rnn.c	/^float_pair get_rnn_token_data(int *tokens, size_t *offsets, int characters, size_t len, int batch, int steps)$/;"	f
+get_rnn_vid_data	rnn_vid.c	/^float_pair get_rnn_vid_data(network net, char **files, int n, int batch, int steps)$/;"	f
+get_seq2seq_data	rnn.c	/^float_pair get_seq2seq_data(char **source, char **dest, int n, int characters, size_t len, int batch, int steps)$/;"	f
+gun_classifier	classifier.c	/^void gun_classifier(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename)$/;"	f
+head	parseWeights.py	/^    def head(self):         #权重文件的前160个字节存储5个int32值，构成文件的头部$/;"	m	class:weightLoader
+im	detector-scipy-opencv.py	/^im = array_to_image(arr)$/;"	v
+imf_name	darknet.c	/^const char imf_name[] = "data\/image_list_200.txt";$/;"	v
+inter_dcgan	lsd.c	/^void inter_dcgan(char *cfgfile, char *weightfile)$/;"	f
+inverted	go.c	/^int inverted = 1;$/;"	v
+label_classifier	classifier.c	/^void label_classifier(char *datacfg, char *filename, char *weightfile)$/;"	f
+legal_go	go.c	/^int legal_go(float *b, float *ko, int p, int r, int c)$/;"	f
+load_files	rnn.c	/^unsigned char **load_files(char *filename, int *n)$/;"	f
+load_go_moves	go.c	/^moves load_go_moves(char *filename)$/;"	f
+main	darknet.c	/^int main(int argc, char **argv)$/;"	f
+main	parseWeights.py	/^def main():$/;"	f
+main	test.py	/^def main():$/;"	f
+makes_safe_go	go.c	/^static int makes_safe_go(float *b, int *lib, int p, int r, int c){$/;"	f	file:
+mcts	go.c	/^    float mcts;$/;"	m	struct:__anon2	file:
+mcts_tree	go.c	/^typedef struct mcts_tree{$/;"	s	file:
+mcts_tree	go.c	/^} mcts_tree;$/;"	t	typeref:struct:mcts_tree	file:
+mean	go.c	/^    float *mean;$/;"	m	struct:mcts_tree	file:
+meta	detector-scipy-opencv.py	/^meta = dn.load_meta("cfg\/coco.data")$/;"	v
+meta	detector.py	/^meta = dn.load_meta("cfg\/thor.data")$/;"	v
+mkimg	darknet.c	/^void mkimg(char *cfgfile, char *weightfile, int h, int w, int num, char *prefix)$/;"	f
+move	go.c	/^} move;$/;"	t	typeref:struct:__anon2	file:
+move_go	go.c	/^void move_go(float *b, int p, int r, int c)$/;"	f
+move_mcts	go.c	/^mcts_tree *move_mcts(mcts_tree *tree, int index)$/;"	f
+moves	go.c	/^} moves;$/;"	t	typeref:struct:__anon1	file:
+n	go.c	/^    int n;$/;"	m	struct:__anon1	file:
+net	detector-scipy-opencv.py	/^net = dn.load_net("cfg\/tiny-yolo.cfg", "tiny-yolo.weights", 0)$/;"	v
+net	detector.py	/^net = dn.load_net("cfg\/yolo-thor.cfg", "\/home\/pjreddie\/backup\/yolo-thor_final.weights", 0)$/;"	v
+network_loss_data	attention.c	/^matrix network_loss_data(network *net, data test)$/;"	f
+network_predict_rotations	go.c	/^float *network_predict_rotations(network *net, float *next)$/;"	f
+nind	go.c	/^static const int nind = 10;$/;"	v	file:
+noi	go.c	/^int noi = 1;$/;"	v
+normalize_layer	darknet.c	/^layer normalize_layer(layer l, int n)$/;"	f
+normalize_net	darknet.c	/^void normalize_net(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+numops	darknet.c	/^long numops(network *net)$/;"	f
+occupied	go.c	/^static int occupied(float *b, int i)$/;"	f	file:
+oneoff	darknet.c	/^void oneoff(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+oneoff2	darknet.c	/^void oneoff2(char *cfgfile, char *weightfile, char *outfile, int l)$/;"	f
+operations	darknet.c	/^void operations(char *cfgfile)$/;"	f
+optimize_picture	nightmare.c	/^void optimize_picture(network *net, image orig, int max_layer, float scale, float rate, float thresh, int norm)$/;"	f
+other_par	parseWeights.py	/^    def other_par(self, block):$/;"	m	class:parse_cfg
+par_all	parseWeights.py	/^    def par_all(self,):$/;"	m	class:parse_cfg
+parse_cfg	parseWeights.py	/^class parse_cfg(object):$/;"	c
+parser	parseWeights.py	/^def parser():$/;"	f
+parser_buffer	parseWeights.py	/^    def parser_buffer(self, shape, dtype='int32', buffer_size=None):        #用来读文件内容$/;"	m	class:weightLoader
+partial	darknet.c	/^void partial(char *cfgfile, char *weightfile, char *outfile, int max)$/;"	f
+pass	go.c	/^    int pass;$/;"	m	struct:mcts_tree	file:
+pick_move	go.c	/^move pick_move(mcts_tree *tree, float temp, int player)$/;"	f
+ponder	go.c	/^mcts_tree *ponder(mcts_tree *tree, network *net, float *b, float *ko, int player, float cpuct)$/;"	f
+predict_attention	attention.c	/^void predict_attention(char *datacfg, char *cfgfile, char *weightfile, char *filename, int top)$/;"	f
+predict_classifier	classifier.c	/^void predict_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filename, int top)$/;"	f
+predict_isegmenter	instance-segmenter.c	/^void predict_isegmenter(char *datafile, char *cfg, char *weights, char *filename)$/;"	f
+predict_move2	go.c	/^float predict_move2(network *net, float *board, float *move, int multi)$/;"	f
+predict_regressor	regressor.c	/^void predict_regressor(char *cfgfile, char *weightfile, char *filename)$/;"	f
+predict_segmenter	segmenter.c	/^void predict_segmenter(char *datafile, char *cfg, char *weights, char *filename)$/;"	f
+print_board	go.c	/^void print_board(FILE *stream, float *board, int player, int *indexes)$/;"	f
+print_cocos	coco.c	/^static void print_cocos(FILE *fp, int image_id, detection *dets, int num_boxes, int classes, int w, int h)$/;"	f	file:
+print_cocos	detector.c	/^static void print_cocos(FILE *fp, char *image_path, detection *dets, int num_boxes, int classes, int w, int h)$/;"	f	file:
+print_detector_detections	detector.c	/^void print_detector_detections(FILE **fps, char *id, detection *dets, int total, int classes, int w, int h)$/;"	f
+print_game	go.c	/^int print_game(float *board, FILE *fp)$/;"	f
+print_imagenet_detections	detector.c	/^void print_imagenet_detections(FILE *fp, int id, detection *dets, int total, int classes, int w, int h)$/;"	f
+print_symbol	rnn.c	/^void print_symbol(int n, char **tokens){$/;"	f
+print_weights	darknet.c	/^void print_weights(char *cfgfile, char *weightfile, int n)$/;"	f
+print_yolo_detections	yolo.c	/^void print_yolo_detections(FILE **fps, char *id, int total, int classes, int w, int h, detection *dets)$/;"	f
+prior	go.c	/^    float *prior;$/;"	m	struct:mcts_tree	file:
+prob	go.c	/^    float *prob;$/;"	m	struct:mcts_tree	file:
+propagate_liberty	go.c	/^static void propagate_liberty(float *board, int *lib, int *visited, int row, int col, int side)$/;"	f	file:
+r	detector-scipy-opencv.py	/^r = detect2(net, meta, im)$/;"	v
+r	detector-scipy-opencv.py	/^r = dn.detect(net, meta, "data\/dog.jpg")$/;"	v
+r	detector.py	/^r = dn.detect(net, meta, "data\/bedroom.jpg")$/;"	v
+r	detector.py	/^r = dn.detect(net, meta, "data\/eagle.jpg")$/;"	v
+r	detector.py	/^r = dn.detect(net, meta, "data\/giraffe.jpg")$/;"	v
+r	detector.py	/^r = dn.detect(net, meta, "data\/horses.jpg")$/;"	v
+r	detector.py	/^r = dn.detect(net, meta, "data\/person.jpg")$/;"	v
+random_go_moves	go.c	/^data random_go_moves(moves m, int n)$/;"	f
+random_unit_vector_image	lsd.c	/^image random_unit_vector_image(int w, int h, int c)$/;"	f
+read_tokenized_data	rnn.c	/^int *read_tokenized_data(char *filename, size_t *read)$/;"	f
+read_tokens	rnn.c	/^char **read_tokens(char *filename, size_t *read)$/;"	f
+reconstruct_picture	nightmare.c	/^void reconstruct_picture(network *net, float *features, image recon, image update, float rate, float momentum, float lambda, int smooth_size, int iters)$/;"	f
+remove_connected	go.c	/^static void remove_connected(float *b, int *lib, int p, int r, int c)$/;"	f	file:
+rescale_net	darknet.c	/^void rescale_net(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+reset_normalize_net	darknet.c	/^void reset_normalize_net(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+result	go.c	/^    float result;$/;"	m	struct:mcts_tree	file:
+rf_name	darknet.c	/^const char rf_name[] = "data\/right_images_list.txt";$/;"	v
+rgbgr_net	darknet.c	/^void rgbgr_net(char *cfgfile, char *weightfile, char *outfile)$/;"	f
+route_par	parseWeights.py	/^    def route_par(self, block):$/;"	m	class:parse_cfg
+row	go.c	/^    int row;$/;"	m	struct:__anon2	file:
+run_art	art.c	/^void run_art(int argc, char **argv)$/;"	f
+run_attention	attention.c	/^void run_attention(int argc, char **argv)$/;"	f
+run_captcha	captcha.c	/^void run_captcha(int argc, char **argv)$/;"	f
+run_char_rnn	rnn.c	/^void run_char_rnn(int argc, char **argv)$/;"	f
+run_cifar	cifar.c	/^void run_cifar(int argc, char **argv)$/;"	f
+run_classifier	classifier.c	/^void run_classifier(int argc, char **argv)$/;"	f
+run_coco	coco.c	/^void run_coco(int argc, char **argv)$/;"	f
+run_dice	dice.c	/^void run_dice(int argc, char **argv)$/;"	f
+run_go	go.c	/^void run_go(int argc, char **argv)$/;"	f
+run_isegmenter	instance-segmenter.c	/^void run_isegmenter(int argc, char **argv)$/;"	f
+run_lsd	lsd.c	/^void run_lsd(int argc, char **argv)$/;"	f
+run_mcts	go.c	/^mcts_tree *run_mcts(mcts_tree *tree, network *net, float *board, float *ko, int player, int n, float cpuct, float secs)$/;"	f
+run_nightmare	nightmare.c	/^void run_nightmare(int argc, char **argv)$/;"	f
+run_regressor	regressor.c	/^void run_regressor(int argc, char **argv)$/;"	f
+run_segmenter	segmenter.c	/^void run_segmenter(int argc, char **argv)$/;"	f
+run_super	super.c	/^void run_super(int argc, char **argv)$/;"	f
+run_swag	swag.c	/^void run_swag(int argc, char **argv)$/;"	f
+run_tag	tag.c	/^void run_tag(int argc, char **argv)$/;"	f
+run_vid_rnn	rnn_vid.c	/^void run_vid_rnn(int argc, char **argv)$/;"	f
+run_vid_rnn	rnn_vid.c	/^void run_vid_rnn(int argc, char **argv){}$/;"	f
+run_voxel	voxel.c	/^void run_voxel(int argc, char **argv)$/;"	f
+run_writing	writing.c	/^void run_writing(int argc, char **argv)$/;"	f
+run_yolo	yolo.c	/^void run_yolo(int argc, char **argv, int noise_freq)$/;"	f
+save_reconstruction	rnn_vid.c	/^image save_reconstruction(network net, image *init, float *feat, char *name, int i)$/;"	f
+score_game	go.c	/^float score_game(float *board)$/;"	f
+select_mcts	go.c	/^float select_mcts(mcts_tree *root, network *net, float *prev, float cpuct)$/;"	f
+self_go	go.c	/^void self_go(char *filename, char *weightfile, char *f2, char *w2, int multi)$/;"	f
+set_network_alpha_beta	lsd.c	/^void set_network_alpha_beta(network *net, float alpha, float beta)$/;"	f
+slerp	lsd.c	/^void slerp(float *start, float *end, float s, int n, float *out)$/;"	f
+smooth	nightmare.c	/^void smooth(image recon, image update, float lambda, int num)$/;"	f
+speed	darknet.c	/^void speed(char *cfgfile, int tics)$/;"	f
+statistics_net	darknet.c	/^void statistics_net(char *cfgfile, char *weightfile)$/;"	f
+stdin_ready	go.c	/^int stdin_ready()$/;"	f
+string_to_board	go.c	/^void string_to_board(char *s, float *board)$/;"	f
+suicide_go	go.c	/^int suicide_go(float *b, int p, int r, int c)$/;"	f
+test_captcha	captcha.c	/^void test_captcha(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_char_rnn	rnn.c	/^void test_char_rnn(char *cfgfile, char *weightfile, int num, char *seed, float temp, int rseed, char *token_file)$/;"	f
+test_cifar	cifar.c	/^void test_cifar(char *filename, char *weightfile)$/;"	f
+test_cifar_csv	cifar.c	/^void test_cifar_csv(char *filename, char *weightfile)$/;"	f
+test_cifar_csvtrain	cifar.c	/^void test_cifar_csvtrain(char *cfg, char *weights)$/;"	f
+test_cifar_multi	cifar.c	/^void test_cifar_multi(char *filename, char *weightfile)$/;"	f
+test_classifier	classifier.c	/^void test_classifier(char *datacfg, char *cfgfile, char *weightfile, int target_layer)$/;"	f
+test_coco	coco.c	/^void test_coco(char *cfgfile, char *weightfile, char *filename, float thresh)$/;"	f
+test_dcgan	lsd.c	/^void test_dcgan(char *cfgfile, char *weightfile)$/;"	f
+test_detector	detector.c	/^void test_detector(char *datacfg, char *cfgfile, char *weightfile,  float thresh, float hier_thresh, char *rf_name, char *imf_name, int fullscreen, int max, int max_box)$/;"	f
+test_dice	dice.c	/^void test_dice(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_go	go.c	/^void test_go(char *cfg, char *weights, int multi)$/;"	f
+test_lsd	lsd.c	/^void test_lsd(char *cfg, char *weights, char *filename, int gray)$/;"	f
+test_super	super.c	/^void test_super(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_tactic_rnn	rnn.c	/^void test_tactic_rnn(char *cfgfile, char *weightfile, int num, float temp, int rseed, char *token_file)$/;"	f
+test_tactic_rnn_multi	rnn.c	/^void test_tactic_rnn_multi(char *cfgfile, char *weightfile, int num, float temp, int rseed, char *token_file)$/;"	f
+test_tag	tag.c	/^void test_tag(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_voxel	voxel.c	/^void test_voxel(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_writing	writing.c	/^void test_writing(char *cfgfile, char *weightfile, char *filename)$/;"	f
+test_yolo	yolo.c	/^void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)$/;"	f
+threat_classifier	classifier.c	/^void threat_classifier(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename)$/;"	f
+total_count	go.c	/^    int total_count;$/;"	m	struct:mcts_tree	file:
+train_attention	attention.c	/^void train_attention(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)$/;"	f
+train_captcha	captcha.c	/^void train_captcha(char *cfgfile, char *weightfile)$/;"	f
+train_char_rnn	rnn.c	/^void train_char_rnn(char *cfgfile, char *weightfile, char *filename, int clear, int tokenized)$/;"	f
+train_cifar	cifar.c	/^void train_cifar(char *cfgfile, char *weightfile)$/;"	f
+train_cifar_distill	cifar.c	/^void train_cifar_distill(char *cfgfile, char *weightfile)$/;"	f
+train_classifier	classifier.c	/^void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)$/;"	f
+train_coco	coco.c	/^void train_coco(char *cfgfile, char *weightfile)$/;"	f
+train_colorizer	lsd.c	/^void train_colorizer(char *cfg, char *weight, char *acfg, char *aweight, int clear, int display)$/;"	f
+train_dcgan	lsd.c	/^void train_dcgan(char *cfg, char *weight, char *acfg, char *aweight, int clear, int display, char *train_images, int maxbatch)$/;"	f
+train_detector	detector.c	/^void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)$/;"	f
+train_dice	dice.c	/^void train_dice(char *cfgfile, char *weightfile)$/;"	f
+train_go	go.c	/^void train_go(char *cfgfile, char *weightfile, char *filename, int *gpus, int ngpus, int clear)$/;"	f
+train_isegmenter	instance-segmenter.c	/^void train_isegmenter(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear, int display)$/;"	f
+train_prog	lsd.c	/^void train_prog(char *cfg, char *weight, char *acfg, char *aweight, int clear, int display, char *train_images, int maxbatch)$/;"	f
+train_regressor	regressor.c	/^void train_regressor(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)$/;"	f
+train_segmenter	segmenter.c	/^void train_segmenter(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear, int display)$/;"	f
+train_super	super.c	/^void train_super(char *cfgfile, char *weightfile, int clear)$/;"	f
+train_swag	swag.c	/^void train_swag(char *cfgfile, char *weightfile)$/;"	f
+train_tag	tag.c	/^void train_tag(char *cfgfile, char *weightfile, int clear)$/;"	f
+train_vid_rnn	rnn_vid.c	/^void train_vid_rnn(char *cfgfile, char *weightfile)$/;"	f
+train_voxel	voxel.c	/^void train_voxel(char *cfgfile, char *weightfile)$/;"	f
+train_writing	writing.c	/^void train_writing(char *cfgfile, char *weightfile)$/;"	f
+train_yolo	yolo.c	/^void train_yolo(char *cfgfile, char *weightfile, int noise_freq)$/;"	f
+try_classifier	classifier.c	/^void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filename, int layer_num)$/;"	f
+valid_captcha	captcha.c	/^void valid_captcha(char *cfgfile, char *weightfile, char *filename)$/;"	f
+valid_char_rnn	rnn.c	/^void valid_char_rnn(char *cfgfile, char *weightfile, char *seed)$/;"	f
+valid_go	go.c	/^void valid_go(char *cfgfile, char *weightfile, int multi, char *filename)$/;"	f
+valid_tactic_rnn	rnn.c	/^void valid_tactic_rnn(char *cfgfile, char *weightfile, char *seed)$/;"	f
+validate_attention_multi	attention.c	/^void validate_attention_multi(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_attention_single	attention.c	/^void validate_attention_single(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_classifier_10	classifier.c	/^void validate_classifier_10(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_classifier_crop	classifier.c	/^void validate_classifier_crop(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_classifier_full	classifier.c	/^void validate_classifier_full(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_classifier_multi	classifier.c	/^void validate_classifier_multi(char *datacfg, char *cfg, char *weights)$/;"	f
+validate_classifier_single	classifier.c	/^void validate_classifier_single(char *datacfg, char *filename, char *weightfile)$/;"	f
+validate_coco	coco.c	/^void validate_coco(char *cfg, char *weights)$/;"	f
+validate_coco_recall	coco.c	/^void validate_coco_recall(char *cfgfile, char *weightfile)$/;"	f
+validate_detector	detector.c	/^void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *outfile)$/;"	f
+validate_detector_flip	detector.c	/^void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char *outfile)$/;"	f
+validate_detector_recall	detector.c	/^void validate_detector_recall(char *datacfg,char *cfgfile, char *weightfile)$/;"	f
+validate_dice	dice.c	/^void validate_dice(char *filename, char *weightfile)$/;"	f
+validate_yolo	yolo.c	/^void validate_yolo(char *cfg, char *weights)$/;"	f
+validate_yolo_recall	yolo.c	/^void validate_yolo_recall(char *cfg, char *weights)$/;"	f
+value	go.c	/^    float *value;$/;"	m	struct:mcts_tree	file:
+value	go.c	/^    float value;$/;"	m	struct:__anon2	file:
+vec_char_rnn	rnn.c	/^void vec_char_rnn(char *cfgfile, char *weightfile, char *seed)$/;"	f
+visit_count	go.c	/^    int *visit_count;$/;"	m	struct:mcts_tree	file:
+visualize	darknet.c	/^void visualize(char *cfgfile, char *weightfile)$/;"	f
+voc_names	yolo.c	/^char *voc_names[] = {"aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"};$/;"	v
+weightLoader	parseWeights.py	/^class weightLoader(object):$/;"	c
+weights	darknet.c	/^const char weights[] = "yolov3-tiny.weights";  \/\/fix weights$/;"	v
+write_head	detector.c	/^void write_head(FILE *fp)$/;"	f
+x	rnn.c	/^    float *x;$/;"	m	struct:__anon3	file:
+x	rnn_vid.c	/^    float *x;$/;"	m	struct:__anon4	file:
+y	rnn.c	/^    float *y;$/;"	m	struct:__anon3	file:
+y	rnn_vid.c	/^    float *y;$/;"	m	struct:__anon4	file:
