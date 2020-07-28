@@ -848,5 +848,9 @@ void print_img(double time, int img_num, int box_num, int classes, detection *de
     fwrite(&r, sizeof(char), 1, fp);
 }
 
-
-
+void save_cost(int layer_idx, int weight_idx, int bit_idx, float *cost, FILE *f)
+{
+	char temp[256];
+	sprintf(temp, "%d,%d,%d,%f\n", layer_idx, weight_idx, bit_idx, *cost);
+	fputs(temp, f);
+}

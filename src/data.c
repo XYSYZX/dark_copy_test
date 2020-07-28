@@ -1040,9 +1040,9 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
     data d = {0};
     d.shallow = 0;
 
-    d.X.rows = n;
+    d.X.rows = n;   //一次加载几张图片, batch/args.threads
     d.X.vals = calloc(d.X.rows, sizeof(float*));
-    d.X.cols = h*w*3;
+    d.X.cols = h*w*3;  //一张图片像素数
 
     d.y = make_matrix(n, 5*boxes);
     for(i = 0; i < n; ++i){
@@ -1467,6 +1467,12 @@ void get_next_batch(data d, int n, int offset, float *X, float *y)  //y is net->
         memcpy(X+j*d.X.cols, d.X.vals[index], d.X.cols*sizeof(float));
         if(y) memcpy(y+j*d.y.cols, d.y.vals[index], d.y.cols*sizeof(float));
     }
+}
+
+void get_data_single(data d, float *X, float *y)
+{
+	memcpy(X, d.X.vals[0], d.X.cols*sizeof(float));
+	memcpy(y, d.y.vals[0], d.y.cols*sizeof(float));
 }
 
 void smooth_data(data d)

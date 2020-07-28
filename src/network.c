@@ -342,6 +342,14 @@ void inject_noise_weights_limit(network *netp)
     printf("finish injecting error!\n");
 }   
 
+void inject_noise_weights_onebit(layer *l, int weight_idx, int bit_idx)
+{
+#ifdef GPU
+	inject_noise_weights_onebit_gpu(l, weight_idx, bit_idx);
+	return;
+#endif
+	inject_noise_float_onebit(l->weights, weight_idx, bit_idx);
+}
 
 void calc_network_cost(network *netp)
 {
@@ -417,7 +425,7 @@ float train_network(network *net, data d)
 {
     assert(d.X.rows % net->batch == 0);
     int batch = net->batch;
-    int n = d.X.rows / batch; //subdivision, which is 2 in yolov3-tiny
+    int n = d.X.rows / batch;
 
     int i;
     float sum = 0;
@@ -617,6 +625,21 @@ float *network_predict(network *net, float *input)  //in network.c
     float *out = net->output;
     *net = orig;
     return out;
+}
+
+float *network_predict_single(network *net, data d)
+{
+	network orig = *net;
+	net->train = 0;
+	forward_network(net);
+	float *out = net->output;
+	*net = orig;
+	return out;
+}
+
+void set_network_input_truth(network *net, data d)
+{
+	get_data_single(d, net->input, net->truth);
 }
 
 int num_detections(network *net, float thresh)
@@ -1006,6 +1029,12 @@ void inject_noise_weights_limit_gpu(network *netp)
     cuda_free_int(limit_gpu);
     printf("finish injecting limit error!\n");
 }
+
+void inject_noise_weights_onebit_gpu(layer *l, int weight_idx, int bit_idx)
+{
+	inject_noise_float_onebit_gpu(l->weights_gpu, weight_idx, bit_idx);
+}
+	
 
 void harmless_update_network_gpu(network *netp)
 {

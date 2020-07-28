@@ -607,6 +607,122 @@ int detections_comparator(const void *pa, const void *pb)
     return 0;
 }
 
+int *get_network_nweights(network *net)
+{
+	int *all_nweights = calloc(net->n, sizeof(int));
+	for(int i = 0; i < net->n; ++i){
+		if(net->layers[i].type == CONVOLUTIONAL)
+			all_nweights[i] = net->layers[i].nweights;
+	}
+	return all_nweights;
+}
+		
+
+float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thresh, char *image_file, char *cost_file, int *bit_mode, int recall, int mAP)
+{
+    network *net = load_network(cfgfile, weightfile, 0); //load network
+    set_batch_network(net, 1);
+	layer l = net->layers[net->n-1];
+ 
+ 	list *plist = get_paths(image_file);
+	char **paths = (char **)list_to_array(plist);
+	char *path = paths[0];
+
+	float nms = .2;
+	float iou_thresh = .5;
+	int i ,j ,k, m, n, x, y;
+
+	FILE *cf = fopen(cost_file, "w");
+
+    data val;
+	load_args args = get_base_args(net);
+	args.coords = l.coords;
+    args.n = 1;
+    args.m = 1;
+	args.classes = l.classes;
+    args.jitter = l.jitter;
+    args.num_boxes = l.max_boxes;
+    args.d = &val;
+    args.type = DETECTION_DATA;
+	args.threads = 1;
+	args.paths = paths;
+
+	pthread_t load_thread = load_data_in_thread(args);
+	pthread_join(load_thread, 0);
+	set_network_input_truth(net, val);
+
+	int *all_nweights = get_network_nweights(net);
+
+    char labelpath[4096];
+	find_replace(path, "images", "labels", labelpath);
+	find_replace(labelpath, "JPEGImages", "labels", labelpath);
+	find_replace(labelpath, ".jpg", ".txt", labelpath);
+	find_replace(labelpath, ".JPEG", ".txt", labelpath);
+
+	int num_labels = 0;
+	int nboxes;
+    box_label *truth = read_boxes(labelpath, &num_labels);
+	
+	for(i = 0; i < net->n; i++){
+		layer *lptr = &net->layers[i];
+		for(j = 0; j < all_nweights[i]; j++){
+			for(k = 0; k < 32; k++){
+				if(bit_mode[k] == 1){
+					inject_noise_weights_onebit(lptr, j, k);
+					float *out = network_predict_single(net, val);
+					save_cost(i, j, k, net->cost, cf);
+					detection *dets;
+					if(recall || mAP){
+						dets = get_network_boxes(net, val.w, val.h, thresh, .5, 0, 1, &nboxes);
+			        	if (nms) do_nms_obj(dets, nboxes, 1, nms);
+					}
+					if(recall){
+						int total = 0;
+						int correct = 0;
+						int proposals = 0;
+						float avg_iou = 0;
+
+						for(m = 0; m < nboxes; m++){
+							if(dets[m].objectness > thresh){
+								++proposals;
+							}
+						}
+						for(m = 0; m < num_labels; ++m) {
+							++total;
+							box t = {truth[j].x, truth[j].y, truth[j].w, truth[j].h};
+							float best_iou = 0;
+							for(n = 0; n < l.w*l.h*l.n; ++n){
+								float iou = box_iou(dets[k].bbox, t);
+								if(dets[k].objectness > thresh && iou > best_iou){
+									best_iou = iou;
+								}
+							}
+							avg_iou += best_iou;
+							if(best_iou > iou_thresh){
+								++correct;
+							}
+						}
+						fprintf(stderr, "%5d %5d %5d\tRPs/Img: %.2f\tIOU: %.2f%%\tRecall:%.2f%%\n", i, correct, total, (float)proposals/(i+1), avg_iou*100/total, 100.*correct/total);
+					}
+					/*
+					if(mAP){
+						
+					}
+					*/
+				}
+			}
+		}
+	}
+	fclose(cf);
+	free(path);
+	free(paths);
+	free_network(net);
+}
+
+
+
+
+
 float validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float thresh_calc_avg_iou, const float iou_thresh, const int map_points, char *wbound_file, char *obound_file)
 {
     int j;
@@ -1519,6 +1635,8 @@ void run_detector(int argc, char **argv)
 
     char *wbound_file = find_char_arg(argc, argv, "-wbound_file", NULL);
     char *obound_file = find_char_arg(argc, argv, "-obound_file", NULL);
+	char *cost_file = find_char_arg(argc, argv, "-cost_file", NULL);
+	char *image_file = find_char_arg(argc, argv, "-image_file", NULL);
     
     char *datacfg = argv[3];
     char *cfg = argv[4];
@@ -1529,6 +1647,13 @@ void run_detector(int argc, char **argv)
     int max_box = 145;
     int max_img = 200;
     float df = 0.00001;
+	int recall = 0;
+	int mAP = 0;
+	int bit_mode[32] = {0, 0, 0, 0, 0, 0, 0, 0, 
+					0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0}; 
+
     if(0==strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, max_img, max_box);
     if(0==strcmp(argv[2], "compare")) compare_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, wf_path, af_path, max_img, df, max_box, wbound_file, obound_file);
     else if(0==strcmp(argv[2], "train")) train_detector(datacfg, cfg, weights, gpus, ngpus, clear);
@@ -1538,6 +1663,7 @@ void run_detector(int argc, char **argv)
     else if(0 == strcmp(argv[2], "map")) validate_detector_map(datacfg, cfg, weights, thresh, iou_thresh, map_points, wbound_file, obound_file);
     else if(0==strcmp(argv[2], "weight_bound")) get_detector_weight_bound(datacfg, cfg, weights, wbound_file);
     else if(0==strcmp(argv[2], "output_bound")) get_detector_output_bound(datacfg, cfg, weights, obound_file);
+    else if(0==strcmp(argv[2], "vulnerable")) vulner_detector(datacfg, cfg, weights, thresh, image_file, cost_file, bit_mode, recall, mAP);
     else if(0==strcmp(argv[2], "demo")) {
         list *options = read_data_cfg(datacfg);
         int classes = option_find_int(options, "classes", 20);

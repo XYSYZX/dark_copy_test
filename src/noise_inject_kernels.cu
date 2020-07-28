@@ -105,6 +105,27 @@ void inject_noise_float_limit_gpu(float *w_gpu, unsigned int length, int *limit_
     single_bit_flip_float_limit_gpu(w_gpu, length, limit_gpu, limits, noise_freq);
 }
 
+__global__ void single_bit_flip_float_onebit_kernel(float *w_gpu, int length, int weight_idx, int bit_idx)
+{
+	int index = blockIdx.x *blockDim.x + threadIdx.x;
+	if(index >= length) return;
+    unsigned int b = 0x1;
+    unsigned int new_b;
+    unsigned int *p;
+    p = (unsigned int *)(&w_gpu[weight_idx]);
+    new_b = b << bit_idx;
+    //printf("chang b to: %d\n", new_b);
+    (*p) = (*p)^(new_b);
+}
+
+void inject_noise_float_onebit_gpu(float *w_gpu, int weight_idx, int bit_idx)
+{
+	//float *w_gpu = &w_gpu[weight_idx];
+	single_bit_flip_float_onebit_kernel<<<1, 1>>>(w_gpu, 1, weight_idx, bit_idx);
+}
+	
+
+
 void test_inject_noise_gpu()
 {
     int length = 16;

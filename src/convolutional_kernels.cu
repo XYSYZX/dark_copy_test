@@ -11,7 +11,10 @@ extern "C" {
 #include "col2im.h"
 #include "utils.h"
 #include "cuda.h"
+//#include "callback_metric.h"
 }
+
+#define __CUPTI 0
 
 __global__ void binarize_kernel(float *x, int n, float *binary)
 {
@@ -72,7 +75,20 @@ void binarize_weights_gpu(float *weights, int n, int size, float *binary)
 
 void forward_convolutional_layer_gpu(convolutional_layer l, network net)
 {
+	/*
+    if(__CUPTI){
+        int device = cuda_get_device();
+        MetricData_Mul_t metric_data_mul = init_md_mul(device);
+        start(&metric_data_mul);
+    }
+	*/
     fill_gpu(l.outputs*l.batch, 0, l.output_gpu, 1);
+	/*
+    if(__CUPTI){
+        end(&metric_data_mul);
+        finish_md_mul(&metric_data_mul);
+    }
+	*/
     if(l.binary){
         binarize_weights_gpu(l.weights_gpu, l.n, l.c/l.groups*l.size*l.size, l.binary_weights_gpu);
         swap_binary(&l);
@@ -118,6 +134,10 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network net)
             } else {
                 im2col_gpu(im, l.c/l.groups, l.h, l.w, l.size, l.stride, l.pad, b);
             }
+			/*
+            if(__CUPTI){
+            int device = cuda_get_device();
+			*/
             gemm_gpu(0,0,m,n,k,1,a,k,b,n,1,c,n);
         }
     }

@@ -168,11 +168,11 @@ void forward_batchnorm_layer(layer l, network net)  //many functions in blas.c
         mean_cpu(l.output, l.batch, l.out_c, l.out_h*l.out_w, l.mean);   // 求every filer(l.out_c)当前batch's all images的均值，对应公式 mini-batch mean
         variance_cpu(l.output, l.mean, l.batch, l.out_c, l.out_h*l.out_w, l.variance);   // 求every filer(l.out_c)当前batch's all images的方差，对应公式 mini-batch variance
 
-        scal_cpu(l.out_c, .99, l.rolling_mean, 1);            // 求every channel均值的滚动平均，预测时使用
+        scal_cpu(l.out_c, .99, l.rolling_mean, 1);            // 求every channel均值的指数加权平均，预测时使用
         // l.rolling_mean *= 0.99
         // l.rolling_mean = 0.01 * l.mean + l.rolling_mean
         axpy_cpu(l.out_c, .01, l.mean, 1, l.rolling_mean, 1);
-        // 求方差的滚动平均
+        // 求方差的指数加权平均
         // l.rolling_variance *= 0.99
         scal_cpu(l.out_c, .99, l.rolling_variance, 1);
         // l.rolling_variance = 0.01 * l.variance + l.rolling_variance

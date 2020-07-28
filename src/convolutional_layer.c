@@ -561,21 +561,26 @@ void update_convolutional_layer(convolutional_layer l, update_args a)
     float momentum = a.momentum;
     float decay = a.decay;
     int batch = a.batch;
-
+	
+	//l.biases += learning_rate/batch * l.bias_updates 更新偏置，这里学习率要除以batch，整个batch的梯度平均值
     axpy_cpu(l.n, learning_rate/batch, l.bias_updates, 1, l.biases, 1);
+	// l.bias_updates *= momentum
     scal_cpu(l.n, momentum, l.bias_updates, 1);
 
     if(l.scales){
         axpy_cpu(l.n, learning_rate/batch, l.scale_updates, 1, l.scales, 1);
         scal_cpu(l.n, momentum, l.scale_updates, 1);
     }
-
+	// l.weight_updates += -decay*batch * l.weights 计算权重衰减，从L2正则化求导而来
     axpy_cpu(l.nweights, -decay*batch, l.weights, 1, l.weight_updates, 1);
+	// l.weights += learning_rate/batch * l.weight_updates 更新权重
     axpy_cpu(l.nweights, learning_rate/batch, l.weight_updates, 1, l.weights, 1);
+	// l.weight_updates *= momentum 计算下次梯度需要的权重的动量
     scal_cpu(l.nweights, momentum, l.weight_updates, 1);
 }
 
 
+// 获取卷基层第 i 个 filter 的 weights
 image get_convolutional_weight(convolutional_layer l, int i)
 {
     int h = l.size;
@@ -583,7 +588,7 @@ image get_convolutional_weight(convolutional_layer l, int i)
     int c = l.c/l.groups;
     return float_to_image(w,h,c,l.weights+i*h*w*c);
 }
-
+// 交换卷基层所有 filter 的 weights 的第一个通道和第三个通道的值
 void rgbgr_weights(convolutional_layer l)
 {
     int i;
@@ -594,7 +599,7 @@ void rgbgr_weights(convolutional_layer l)
         }
     }
 }
-
+// 缩放卷基层所有 filter 的 weights
 void rescale_weights(convolutional_layer l, float scale, float trans)
 {
     int i;
@@ -608,6 +613,7 @@ void rescale_weights(convolutional_layer l, float scale, float trans)
     }
 }
 
+// 获取卷基层所有 filter 正则化后的 weights
 image *get_weights(convolutional_layer l)
 {
     image *weights = calloc(l.n, sizeof(image));
@@ -625,6 +631,7 @@ image *get_weights(convolutional_layer l)
     return weights;
 }
 
+// 可视化卷基层
 image *visualize_convolutional_layer(convolutional_layer l, char *window, image *prev_weights)
 {
     image *single_weights = get_weights(l);
