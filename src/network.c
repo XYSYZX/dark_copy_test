@@ -364,6 +364,7 @@ void calc_network_cost(network *netp)
         }
     }
     *net.cost = sum/count;
+	printf("cost is: %f\n", *net.cost);
 }
 
 int get_predicted_class_network(network *net)
@@ -630,7 +631,7 @@ float *network_predict(network *net, float *input)  //in network.c
 float *network_predict_single(network *net, data d)
 {
 	network orig = *net;
-	net->train = 0;
+	net->train = 1;
 	forward_network(net);
 	float *out = net->output;
 	*net = orig;

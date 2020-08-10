@@ -779,6 +779,9 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
     params.net = net;
 
     size_t workspace_size = 0;
+    long long int all_outputs = 0;
+    long long int conv_outputs = 0;
+    long long int maxpool_outputs = 0;
     n = n->next;   //指向net块之后的第一层(conv)
     int count = 0;
     free_section(s);
@@ -792,6 +795,7 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
         LAYER_TYPE lt = string_to_layer_type(s->type);
         if(lt == CONVOLUTIONAL){
             l = parse_convolutional(options, params);
+            conv_outputs += l.batch*l.outputs;
             fprintf(stderr, "in layer %d, num of weights: %d, num of biases: %d\n", count, l.nweights, l.nbiases);
         }else if(lt == DECONVOLUTIONAL){
             l = parse_deconvolutional(options, params);
@@ -833,6 +837,7 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
         }else if(lt == BATCHNORM){
             l = parse_batchnorm(options, params);
         }else if(lt == MAXPOOL){
+            maxpool_outputs += l.batch*l.outputs;
             l = parse_maxpool(options, params);
         }else if(lt == REORG){
             l = parse_reorg(options, params);
@@ -855,6 +860,8 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
         }else{
             fprintf(stderr, "Type not recognized: %s\n", s->type);
         }
+        all_outputs += l.batch * l.outputs;
+        printf("now outputs is: %lld\n", all_outputs);
         l.clip = net->clip;
         l.truth = option_find_int_quiet(options, "truth", 0);
         l.onlyforward = option_find_int_quiet(options, "onlyforward", 0);
@@ -892,7 +899,7 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
     net->truth_gpu = cuda_make_array(net->truth, net->truths*net->batch);
 #endif
     if(workspace_size){
-        //printf("%ld\n", workspace_size);
+        printf("%ld\n", workspace_size);
 #ifdef GPU
         if(gpu_index >= 0){
             net->workspace = cuda_make_array(0, (workspace_size-1)/sizeof(float)+1);
@@ -903,6 +910,9 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
         net->workspace = calloc(1, workspace_size);
 #endif
     }
+    //printf("all weights: %ld\n", all_nweights);
+    printf("conv output: %lld\n", conv_outputs);
+    printf("maxpool output: %lld\n", maxpool_outputs);
     return net;
 }
 

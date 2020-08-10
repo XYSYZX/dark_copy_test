@@ -665,9 +665,11 @@ float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thre
 	
 	for(i = 0; i < net->n; i++){
 		layer *lptr = &net->layers[i];
+		printf("%d weights\n", all_nweights[i]);
 		for(j = 0; j < all_nweights[i]; j++){
 			for(k = 0; k < 32; k++){
 				if(bit_mode[k] == 1){
+					double time = what_time_is_it_now();
 					inject_noise_weights_onebit(lptr, j, k);
 					float *out = network_predict_single(net, val);
 					save_cost(i, j, k, net->cost, cf);
@@ -704,11 +706,13 @@ float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thre
 						}
 						fprintf(stderr, "%5d %5d %5d\tRPs/Img: %.2f\tIOU: %.2f%%\tRecall:%.2f%%\n", i, correct, total, (float)proposals/(i+1), avg_iou*100/total, 100.*correct/total);
 					}
+					fprintf(stderr, "time: %f\n", what_time_is_it_now() - time);
 					/*
 					if(mAP){
 						
 					}
 					*/
+                    inject_noise_weights_onebit(lptr, j, k);
 				}
 			}
 		}
@@ -1299,7 +1303,7 @@ void compare_detector(char *datacfg, char *cfgfile, char *weightfile,  float thr
             }
             network_predict(net, X);  //return output of network, only forward_network
             //if(net->limit_output) check_outputs(net);
-            //printf("%s: Predicted in %f seconds.\n", imagepath, what_time_is_it_now()-times);
+            printf("%s: Predicted in %f seconds.\n", imagepath, what_time_is_it_now()-times);
                 
             int nboxes = 0;
             detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
@@ -1652,7 +1656,7 @@ void run_detector(int argc, char **argv)
 	int bit_mode[32] = {0, 0, 0, 0, 0, 0, 0, 0, 
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0}; 
+					0, 0, 0, 0, 0, 0, 1, 0}; 
 
     if(0==strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, max_img, max_box);
     if(0==strcmp(argv[2], "compare")) compare_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, wf_path, af_path, max_img, df, max_box, wbound_file, obound_file);

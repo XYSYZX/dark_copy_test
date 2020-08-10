@@ -632,6 +632,7 @@ void get_weight_bound_network(network *net);
 void get_output_bound_network(network *net);
 void inject_noise_weights(network *netp);
 void inject_noise_weights_limit(network *netp);
+void inject_noise_weights_onebit(layer *l, int weight_idx, int bit_idx);
 
 void free_data(data d);                                     //in data.c
 
@@ -691,6 +692,7 @@ void backward_network_gpu(network *net);    //network.c
 void update_network_gpu(network *net);      //same
 void inject_noise_weights_gpu(network *netp);
 void inject_noise_weights_limit_gpu(network *netp);
+void inject_noise_weights_onebit_gpu(layer *l, int weight_idx, int bit_idx);
 
 float train_networks(network **nets, int n, data d, int interval);   //network.c
 void sync_nets(network **nets, int n, int interval);                 //network.c
@@ -701,6 +703,7 @@ void draw_label(image a, int r, int c, image label, const float *rgb);
 void save_image(image im, const char *name);
 void save_image_options(image im, const char *name, IMTYPE f, int quality);
 void get_next_batch(data d, int n, int offset, float *X, float *y);
+void get_data_single(data d, float *X, float *y);
 void grayscale_image_3c(image im);
 void normalize_image(image p);
 void matrix_to_csv(matrix m);
@@ -753,6 +756,7 @@ void check_outputs(layer l);
 
 void inject_noise_float(float *w, unsigned int length);  //noise_inject.c
 void inject_noise_float_limit(float *w, unsigned int length, int *limit, int limits);
+void inject_noise_float_onebit(float *w, int weight_idx, int bit_idx);
 #ifdef GPU
 void get_output_bound_gpu(layer l);
 void get_weight_bound_gpu(layer l);
@@ -762,6 +766,7 @@ void check_outputs_gpu(layer l);
 
 void inject_noise_float_gpu(float *w, unsigned int length);  //noise_inject_kernel
 void inject_noise_float_limit_gpu(float *w, unsigned int length, int *limit, int limits);
+void inject_noise_float_onebit_gpu(float *w_gpu, int weight_idx, int bit_idx);
 void test_inject_noise_gpu();
 #endif
 
@@ -807,6 +812,7 @@ void fill_image(image m, float s);
 image grayscale_image(image im);
 void rotate_image_cw(image im, int times);
 double what_time_is_it_now();
+void save_cost(int layer_idx, int weight_idx, int bit_idx, float *cost, FILE *f);
 image rotate_image(image m, float rad);
 void visualize_network(network *net);
 float box_iou(box a, box b);
@@ -827,6 +833,8 @@ gold_ans *load_rightline(FILE *rf);
 image **load_alphabet();
 image get_network_image(network *net);
 float *network_predict(network *net, float *input);
+float *network_predict_single(network *net, data d);
+void set_network_input_truth(network *net, data d);
 
 int network_width(network *net);
 int network_height(network *net);

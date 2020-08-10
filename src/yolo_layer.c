@@ -247,6 +247,7 @@ void forward_yolo_layer(const layer l, network net)
                 if(iou > .5) recall += 1;
                 if(iou > .75) recall75 += 1;
                 avg_iou += iou;
+				//printf("avg_iou: %f\n", avg_iou);
             }
         }
     }
