@@ -58,10 +58,10 @@ void inject_noise_float_limit(float *w, unsigned int length, int *limit, int lim
     }
 }
 
-void inject_noise_float_onebit(float *w, int weight_idx, int bit_idx)
+void inject_noise_float_onebit(float *w, int idx, int bit_idx)
 {
-	float *weight = &w[weight_idx];
-	single_bit_flip_float(weight, bit_idx);
+	float *x = &w[idx];
+	single_bit_flip_float(x, bit_idx);
 }
 
 /*

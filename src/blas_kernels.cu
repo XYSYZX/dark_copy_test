@@ -1033,3 +1033,15 @@ extern "C" void upsample_gpu(float *in, int w, int h, int c, int batch, int stri
     upsample_kernel<<<cuda_gridsize(size), BLOCK>>>(size, in, w, h, c, batch, stride, forward, scale, out);
     check_error(cudaPeekAtLastError());
 }
+
+__global__ void abs_kernel(float *X, float *Y, size_t N)
+{
+    size_t i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
+    if(i >= N) return;
+    Y[i] = fabsf(X[i]);
+}
+
+extern "C" void abs_gpu(float *X, float *Y, size_t N)
+{
+    abs_kernel<<<cuda_gridsize(N), BLOCK>>>(X, Y, N);
+}

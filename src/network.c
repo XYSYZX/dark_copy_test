@@ -255,16 +255,15 @@ void forward_network(network *netp)
         if(l.delta){
             fill_cpu(l.outputs * l.batch, 0, l.delta, 1);
         }
-	//从这里开始我们可以一层一层分析了，重复的层就不再分析了，顺序如下：
-        //[convolutional]
-        //[maxpool]
-        //[local]
-        //[dropout]
-        //[connected]
-        //[detection]
         l.forward(l, net);
         if(net.limit_output) {
             check_outputs(l);
+        }
+        if(net.bit_attack){
+            if(net.attack->a_output && net.attack->layer_idx == i){
+                if(net.attack->progress_attack) progressive_attack(&net);
+                else single_attack(&net);
+            }
         }
         net.input = l.output;
         if(l.truth) {
@@ -364,7 +363,7 @@ void calc_network_cost(network *netp)
         }
     }
     *net.cost = sum/count;
-	printf("cost is: %f\n", *net.cost);
+	//printf("cost is: %f\n", *net.cost);
 }
 
 int get_predicted_class_network(network *net)
@@ -638,6 +637,72 @@ float *network_predict_single(network *net, data d)
 	return out;
 }
 
+float network_predict_search(network *net, data d)
+{
+    assert(d.X.rows % net->batch == 0);
+    int batch = net->batch;
+    //printf("d.X.rows* %d\n", d.X.rows);
+    int n = d.X.rows / batch;
+
+    int i;
+    float sum = 0; 
+    for(i = 0; i < n; ++i){
+        get_next_batch(d, batch, i*batch, net->input, net->truth);
+        float err = train_network_datum(net);
+        sum += err;
+    }
+    return (float)sum/(n*batch);
+}
+
+void get_topk_grad(float *x, float *x_gpu, int length, int *w_idx, int topk)
+{
+    float *x_tmp = (float*)calloc(length, sizeof(float));
+#ifdef GPU
+    float *x_tmp_gpu = cuda_make_array_dev(0, length);
+    abs_gpu(x_gpu, x_tmp_gpu, length);
+    cuda_pull_array(x_tmp_gpu, x_tmp, length);
+    cuda_free(x_tmp_gpu);
+#else
+    abs_cpu(x, x_tmp, length);
+#endif
+    //for(int i = 0; i < length; i++) printf("%f ", x_tmp[i]);
+    top_k(x_tmp, length, topk, w_idx);
+    free(x_tmp);
+}
+
+float predict_network_datum(network *net)
+{
+    net->train = 1;
+    forward_network(net);
+    //backward_network(net);
+    float error = *net->cost;
+    return error;
+}
+
+float network_predict_attack(network *net, data d)
+{
+    assert(d.X.rows % net->batch == 0);
+    int batch = net->batch;
+    int n = d.X.rows / batch;
+
+    int i;
+    float sum = 0;
+    for(i = 0; i < n; ++i){
+        get_next_batch(d, batch, i*batch, net->input, net->truth);
+        if(net->attack->a_input){
+            if(net->attack->progress_attack){
+                progressive_attack(net);
+            }
+            else{
+                single_attack(net);
+            }
+        }
+        float err = predict_network_datum(net);
+        sum += err;
+    }
+    return (float)sum/(n*batch);
+}
+
 void set_network_input_truth(network *net, data d)
 {
 	get_data_single(d, net->input, net->truth);
@@ -880,9 +945,11 @@ void free_network(network *net)
     free(net->layers);
     if(net->input) free(net->input);
     if(net->truth) free(net->truth);
+    if(net->delta) free(net->delta);
 #ifdef GPU
     if(net->input_gpu) cuda_free(net->input_gpu);
     if(net->truth_gpu) cuda_free(net->truth_gpu);
+    if(net->delta_gpu) cuda_free(net->delta_gpu);
 #endif
     free(net);
 }
@@ -940,6 +1007,12 @@ void forward_network_gpu(network *netp)
             times = what_time_is_it_now();
             check_outputs_gpu(l);
             //printf("check outputs!\n");
+        }
+        if(net.bit_attack){
+            if(net.attack->a_output && net.attack->layer_idx == i){
+                if(net.attack->progress_attack) progressive_attack(&net);
+                else single_attack(&net);
+            }
         }
         net.input_gpu = l.output_gpu;
         net.input = l.output;

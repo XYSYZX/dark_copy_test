@@ -114,6 +114,9 @@ typedef struct network network;
 struct layer;
 typedef struct layer layer;
 
+struct attack_args;
+typedef struct attack_args attack_args;
+
 struct layer{
     LAYER_TYPE type;
     ACTIVATION activation;
@@ -509,6 +512,9 @@ typedef struct network{
     int weight_bound;
     int limit_weight;
     int limit_output;
+//bit attack
+    int bit_attack;
+    attack_args *attack;
 
 } network;
 
@@ -668,6 +674,7 @@ void scal_cpu(int N, float ALPHA, float *X, int INCX);
 void fill_cpu(int N, float ALPHA, float * X, int INCX);
 void normalize_cpu(float *x, float *mean, float *variance, int batch, int filters, int spatial);
 void softmax(float *input, int n, float temp, int stride, float *output);
+void abs_cpu(float *X, float *Y, size_t N);
 
 int best_3d_shift_r(image a, image b, int min, int max);
 #ifdef GPU
@@ -675,6 +682,7 @@ void axpy_gpu(int N, float ALPHA, float * X, int INCX, float * Y, int INCY);
 void fill_gpu(int N, float ALPHA, float * X, int INCX);  //in blas_kernel.cu
 void scal_gpu(int N, float ALPHA, float * X, int INCX);
 void copy_gpu(int N, float * X, int INCX, float * Y, int INCY);
+void abs_gpu(float *X, float *Y, size_t N);
 
 void cuda_set_device(int n);
 void cuda_free(float *x_gpu);
@@ -756,7 +764,7 @@ void check_outputs(layer l);
 
 void inject_noise_float(float *w, unsigned int length);  //noise_inject.c
 void inject_noise_float_limit(float *w, unsigned int length, int *limit, int limits);
-void inject_noise_float_onebit(float *w, int weight_idx, int bit_idx);
+void inject_noise_float_onebit(float *w, int idx, int bit_idx);
 #ifdef GPU
 void get_output_bound_gpu(layer l);
 void get_weight_bound_gpu(layer l);
@@ -766,7 +774,7 @@ void check_outputs_gpu(layer l);
 
 void inject_noise_float_gpu(float *w, unsigned int length);  //noise_inject_kernel
 void inject_noise_float_limit_gpu(float *w, unsigned int length, int *limit, int limits);
-void inject_noise_float_onebit_gpu(float *w_gpu, int weight_idx, int bit_idx);
+void inject_noise_float_onebit_gpu(float *w_gpu, int idx, int bit_idx);
 void test_inject_noise_gpu();
 #endif
 
@@ -803,6 +811,7 @@ image get_network_image_layer(network *net, int i);
 gold_ans *create_network_boxes(int img_id, int box_num, int class_num);
 layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
+void get_topk_grad(float *x, float *x_gpu, int length, int *w_idx, int topk);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 void ghost_image(image source, image dest, int dx, int dy);
@@ -829,12 +838,16 @@ matrix network_predict_data(network *net, data test);
 //gold_ans *parse_goldans(char *rightline, int max_num);
 void save_rightline(int img_id, detection *dets, int nboxes, int classes, int max_box, FILE *rf);
 gold_ans *load_rightline(FILE *rf);
+//void save_target(FILE *f, float *target, int img_id, int outputs);
+//float *load_target(FILE *f, int img_id_t);
 
 image **load_alphabet();
 image get_network_image(network *net);
 float *network_predict(network *net, float *input);
 float *network_predict_single(network *net, data d);
 void set_network_input_truth(network *net, data d);
+float network_predict_search(network *net, data d);
+float network_predict_attack(network *net, data d);
 
 int network_width(network *net);
 int network_height(network *net);
@@ -878,6 +891,7 @@ void strip(char *s);
 float sec(clock_t clocks);
 void **list_to_array(list *l);
 void top_k(float *a, int n, int k, int *index);
+void top_k_int(int *a, int n, int k, int *index, int *y);
 int *read_map(char *filename);
 void error(const char *s);
 int max_index(float *a, int n);
@@ -897,6 +911,83 @@ size_t rand_size_t();
 float rand_normal();
 float rand_uniform(float min, float max);
 
+typedef struct attack_args{
+    //network *net;
+    int layer_num;
+    int layer_idx;
+    int iter_idx;
+    int k_idx;
+
+    int sign_attack;
+    float epsilon;
+    int reverse;
+
+    int a_input;   //attack inputs, 0 or 1
+    int a_weight;
+    int a_bias;
+    int a_output;
+
+    int topk;
+    /*
+    int topk_inputs; //num of inputs to be attacked
+    int topk_weights;
+    int topk_biases;
+    int topk_outputs;
+    */
+    int *flipped_bit;   //一个数字中要翻转的位数
+    int fb_len;        //位数的长度
+
+    int total_img;
+    int seen_img;
+    int n;  //一次看几张图片
+
+    int **mloss_loc;
+    int **mloss_loc_inputs;   //长度: 1 * (topk*total_img/threads)
+    int **mloss_loc_weights; //layer1, weight1, weight2... 长度: layers * (topk*total_img/threads)
+    int **mloss_loc_outputs; //layer1, output1, output2..., 长度同上
+    int **mloss_loc_biases;
+
+    float **mloss;
+    float **mloss_inputs; //长度: 1 * (topk*total_img/threads)
+    float **mloss_weights; //长度: layers * (topk*total_img/threads)
+    float **mloss_biases;
+    float **mloss_outputs; //长度同上
+
+    int *len;
+    int *inputs_len;    //length: 1
+    int *weights_len;   //length: layer num
+    int *biases_len;
+    int *outputs_len;
+
+    float **grads;
+    float **grads_gpu;
+    float **input_grads;    //length: 1*1
+    float **input_grads_gpu;
+    float **weight_grads;   //length: layer num*1
+    float **weight_grads_gpu;
+    float **bias_grads;
+    float **bias_grads_gpu;
+    float **output_grads;
+    float **output_grads_gpu;
+
+    float **x;
+    float **x_gpu;
+    float **inputs;     //length: 1*1
+    float **inputs_gpu;
+    float **weights;    //length: layer num*1
+    float **weights_gpu;
+    float **biases;
+    float **biases_gpu;
+    float **outputs;
+    float **outputs_gpu;
+
+    int progress_attack;
+
+} attack_args;
+
+void attack_data(network *net, load_args args);
+void progressive_attack(network *net);
+void single_attack(network *net);
 #ifdef __cplusplus
 }
 #endif

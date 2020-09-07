@@ -682,6 +682,8 @@ void parse_net_options(list *options, network *net)
     net->weight_bound = option_find_int_quiet(options, "weight_bound", 0);
     net->limit_weight = option_find_int_quiet(options, "limit_weight", 0);
     net->limit_output = option_find_int_quiet(options, "limit_output", 0);
+    //bit attack
+    net->bit_attack = option_find_int_quiet(options, "bit_attack", 0);
 
     net->adam = option_find_int_quiet(options, "adam", 0);
     if(net->adam){
@@ -780,7 +782,9 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
 
     size_t workspace_size = 0;
     long long int all_outputs = 0;
+    long long int conv_weights = 0;
     long long int conv_outputs = 0;
+    long long int conv_bias = 0;
     long long int maxpool_outputs = 0;
     n = n->next;   //指向net块之后的第一层(conv)
     int count = 0;
@@ -796,7 +800,9 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
         if(lt == CONVOLUTIONAL){
             l = parse_convolutional(options, params);
             conv_outputs += l.batch*l.outputs;
-            fprintf(stderr, "in layer %d, num of weights: %d, num of biases: %d\n", count, l.nweights, l.nbiases);
+            conv_bias += l.n;
+            conv_weights += l.nweights;
+            //fprintf(stderr, "in layer %d, num of weights: %d, num of biases: %d\n", count, l.nweights, l.nbiases);
         }else if(lt == DECONVOLUTIONAL){
             l = parse_deconvolutional(options, params);
         }else if(lt == LOCAL){
@@ -861,7 +867,7 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
             fprintf(stderr, "Type not recognized: %s\n", s->type);
         }
         all_outputs += l.batch * l.outputs;
-        printf("now outputs is: %lld\n", all_outputs);
+        //printf("now outputs is: %lld\n", all_outputs);
         l.clip = net->clip;
         l.truth = option_find_int_quiet(options, "truth", 0);
         l.onlyforward = option_find_int_quiet(options, "onlyforward", 0);
@@ -893,10 +899,12 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
     net->output = out.output;
     net->input = calloc(net->inputs*net->batch, sizeof(float));
     net->truth = calloc(net->truths*net->batch, sizeof(float));
+    net->delta = calloc(net->inputs*net->batch, sizeof(float));
 #ifdef GPU
     net->output_gpu = out.output_gpu;
     net->input_gpu = cuda_make_array(net->input, net->inputs*net->batch);
     net->truth_gpu = cuda_make_array(net->truth, net->truths*net->batch);
+    net->delta_gpu = cuda_make_array(net->input, net->inputs*net->batch);
 #endif
     if(workspace_size){
         printf("%ld\n", workspace_size);
@@ -912,7 +920,10 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
     }
     //printf("all weights: %ld\n", all_nweights);
     printf("conv output: %lld\n", conv_outputs);
+    printf("conv bias: %lld\n", conv_bias);
+    printf("conv weights: %lld\n", conv_weights);
     printf("maxpool output: %lld\n", maxpool_outputs);
+    printf("all output: %lld\n", all_outputs);
     return net;
 }
 
@@ -1394,3 +1405,34 @@ gold_ans *load_rightline(FILE *rf)
     fread(&end, sizeof(char), 1, rf);
     return gd;
 }
+
+/*
+void save_target(FILE *f, float *target, int img_id, int outputs)
+{
+    if(f==NULL)
+    {
+        printf("right file dont exist!\n");
+        return;
+    }
+    fwrite(&img_id, sizeof(int), 1, f);
+    fwrite(&outputs, sizeof(int), 1, f);
+    fwrite(target, sizeof(float), outputs, f);
+    char end = '\n';
+    fwrite(&end, sizeof(char), 1, rf);
+}
+
+float *load_target(FILE *f, int img_id_t)
+{
+    int img_id, outputs;
+    fread(&img_id, sizeof(int), 1, f);
+    if(img_id != img_id_t){
+        printf("image id is not same!\n");
+        return;
+    }
+    fread(&outputs, sizeof(int), 1, f);
+    float target[outputs];
+    fread(target, sizeof(float), outputs, f);
+    char end;
+    fread(&end, sizeof(char), 1, f);
+    return target;
+}*/

@@ -348,4 +348,8 @@ void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int for
     }
 }
 
-
+void abs_cpu(float *X, float *Y, size_t N)
+{
+    int i;
+    for(i = 0; i < N; i++) Y[i] = fabs(X[i]);
+}

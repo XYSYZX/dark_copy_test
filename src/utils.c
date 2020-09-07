@@ -250,6 +250,23 @@ void top_k(float *a, int n, int k, int *index)
     }
 }
 
+void top_k_int(int *a, int n, int k, int *index, int *y)
+{
+    int i,j;
+    for(j = 0; j < k; ++j) index[j] = -1;
+    for(i = 0; i < n; ++i){
+        int curr = i;
+        for(j = 0; j < k; ++j){
+            if((index[j] < 0) || a[curr] > a[index[j]]){
+                int swap = curr;
+                curr = index[j];
+                index[j] = swap;
+                y[j] = a[curr];
+            }
+        }
+    }
+}
+
 void error(const char *s)
 {
     perror(s);
@@ -854,3 +871,4 @@ void save_cost(int layer_idx, int weight_idx, int bit_idx, float *cost, FILE *f)
 	sprintf(temp, "%d,%d,%d,%f\n", layer_idx, weight_idx, bit_idx, *cost);
 	fputs(temp, f);
 }
+

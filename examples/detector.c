@@ -618,7 +618,7 @@ int *get_network_nweights(network *net)
 }
 		
 
-float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thresh, char *image_file, char *cost_file, int *bit_mode, int recall, int mAP)
+void vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thresh, char *image_file, char *cost_file, int *bit_mode, int recall, int mAP)
 {
     network *net = load_network(cfgfile, weightfile, 0); //load network
     set_batch_network(net, 1);
@@ -630,7 +630,7 @@ float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thre
 
 	float nms = .2;
 	float iou_thresh = .5;
-	int i ,j ,k, m, n, x, y;
+	int i ,j ,k, m, n;
 
 	FILE *cf = fopen(cost_file, "w");
 
@@ -671,7 +671,7 @@ float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thre
 				if(bit_mode[k] == 1){
 					double time = what_time_is_it_now();
 					inject_noise_weights_onebit(lptr, j, k);
-					float *out = network_predict_single(net, val);
+					network_predict_single(net, val);
 					save_cost(i, j, k, net->cost, cf);
 					detection *dets;
 					if(recall || mAP){
@@ -722,9 +722,77 @@ float vulner_detector(char *datacfg, char *cfgfile, char *weightfile, float thre
 	free(paths);
 	free_network(net);
 }
+/*
+char *get_imagepath(FILE *f)
+{
+    char imagepath[256];
+    fgets(imagepath, 256, f);  //get path of an image in imagelist
+    char *find = strchr(imagepath, '\n');
+    if(find) *find = '\0';
+    return imagepath;
+}
+*/
+void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int topk, int *flipped_bit, int bit_num, int fac, int type, int progress_attack, int sign_attack, float epsilon)
+{
+    list *options = read_data_cfg(datacfg);
+    char *images = option_find_str(options, "train", "data/train.list");
+    network *net = load_network(cfgfile, weightfile, 0); //load network
+    //net->delta = (float *)calloc(net->inputs*net->batch, sizeof(float));
+    //net->delta_gpu = cuda_make_array(0, net->inputs*net->batch);
 
+    list *plist = get_paths(images);
+    char **paths = (char **)list_to_array(plist);
 
+    //data buffer;
 
+    layer l = net->layers[net->n - 1];
+
+    load_args args = get_base_args(net);
+    args.coords = l.coords;
+    args.paths = paths;
+    args.n = net->batch * net->subdivisions;
+    args.m = plist->size;
+    args.classes = l.classes;
+    args.jitter = l.jitter;
+    args.num_boxes = l.max_boxes;
+    //args.d = &buffer;
+    args.type = DETECTION_DATA;
+    args.threads = 1;
+    
+    attack_args attack = {0};
+    //attack.net = net;
+    attack.total_img = plist->size / fac;
+    attack.n = net->batch;
+    attack.progress_attack = progress_attack;
+    attack.sign_attack = sign_attack;
+    attack.topk = topk;
+    attack.fb_len = bit_num;
+    attack.flipped_bit = flipped_bit;
+    attack.epsilon = epsilon;
+    attack.reverse = 1;
+
+    net->bit_attack = 1;
+    net->attack = &attack;
+
+    switch(type){
+        case 0:
+            attack.a_input = 1;
+            break;
+        case 1:
+            attack.a_weight = 1;
+            break;
+        case 2:
+            attack.a_bias = 1;
+            break;
+        case 3:
+            attack.a_output = 1;
+            break;
+        default:
+            printf("wrong attack type!\n");
+    }
+    attack_data(net, args);
+    free_network(net);
+}
 
 
 float validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, float thresh_calc_avg_iou, const float iou_thresh, const int map_points, char *wbound_file, char *obound_file)
@@ -1656,7 +1724,17 @@ void run_detector(int argc, char **argv)
 	int bit_mode[32] = {0, 0, 0, 0, 0, 0, 0, 0, 
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 1, 0}; 
+					0, 0, 0, 0, 0, 0, 1, 0};
+
+    int topk = find_int_arg(argc, argv, "-topk", 1);
+    //int flipped_bit = find_int_arg(argc, argv, "-flipped_bit", 0);
+    int fac = find_int_arg(argc, argv, "-fac", 1);
+    int flipped_bit[] = {30, 28};
+    int bit_num = 2;
+    int type = find_int_arg(argc, argv, "-type", 0);
+    int progress_attack = find_int_arg(argc, argv, "-progress_attack", 0);
+    int sign_attack = find_int_arg(argc, argv, "-sign_attack", 0);
+    float epsilon = find_float_arg(argc, argv, "-epsilon", 1);
 
     if(0==strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, max_img, max_box);
     if(0==strcmp(argv[2], "compare")) compare_detector(datacfg, cfg, weights, thresh, hier_thresh, rf_name, imf_name, wf_path, af_path, max_img, df, max_box, wbound_file, obound_file);
@@ -1668,6 +1746,7 @@ void run_detector(int argc, char **argv)
     else if(0==strcmp(argv[2], "weight_bound")) get_detector_weight_bound(datacfg, cfg, weights, wbound_file);
     else if(0==strcmp(argv[2], "output_bound")) get_detector_output_bound(datacfg, cfg, weights, obound_file);
     else if(0==strcmp(argv[2], "vulnerable")) vulner_detector(datacfg, cfg, weights, thresh, image_file, cost_file, bit_mode, recall, mAP);
+    else if(0==strcmp(argv[2], "bit_attack")) bit_attack_detector(datacfg, cfg, weights, topk, flipped_bit, bit_num, fac, type, progress_attack, sign_attack, epsilon);
     else if(0==strcmp(argv[2], "demo")) {
         list *options = read_data_cfg(datacfg);
         int classes = option_find_int(options, "classes", 20);

@@ -151,7 +151,12 @@ void forward_yolo_layer(const layer l, network net)
         }
     }
 #endif
-
+    /*
+    if(net.bit_attack){
+        //memcpy(l.delta, l.output, l.outputs*l.batch*sizeof(float));
+        return
+    }
+    */
     memset(l.delta, 0, l.outputs * l.batch * sizeof(float)); 
     if(!net.train) return;
     float avg_iou = 0;
@@ -253,7 +258,7 @@ void forward_yolo_layer(const layer l, network net)
     }
         //上面处理完了整个batch中的所有图片
     *(l.cost) = pow(mag_array(l.delta, l.outputs * l.batch), 2);
-    printf("Region %d Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, .5R: %f, .75R: %f,  count: %d\n", net.index, avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, recall75/count, count);
+    //printf("Region %d Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, .5R: %f, .75R: %f,  count: %d\n", net.index, avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, recall75/count, count);
 }
 
 void backward_yolo_layer(const layer l, network net)
@@ -373,6 +378,14 @@ void forward_yolo_layer_gpu(const layer l, network net)
             activate_array_gpu(l.output_gpu + index, (1+l.classes)*l.w*l.h, LOGISTIC);
         }
     }
+
+    /*
+    if(net.bit_attack){
+        //copy_gpu(l.outputs*l.batch, l.output_gpu, 1, l.delta_gpu, 1);
+        return
+    }
+    */
+
     if(!net.train || l.onlyforward){
         cuda_pull_array(l.output_gpu, l.output, l.batch*l.outputs);
         return;
