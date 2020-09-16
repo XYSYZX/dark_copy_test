@@ -138,6 +138,12 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network net)
             if(__CUPTI){
             int device = cuda_get_device();
 			*/
+#ifdef CUPTI
+            CUdevice device = 0;
+            DRIVER_API_CALL(cuInit(0));
+            DRIVER_API_CALL(cuDeviceGet(&device, 0));
+            MetricData_Mul_t metric_data_mul = init_md_mul(device);
+#endif
             gemm_gpu(0,0,m,n,k,1,a,k,b,n,1,c,n);
         }
     }

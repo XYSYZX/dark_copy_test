@@ -261,7 +261,7 @@ void top_k_int(int *a, int n, int k, int *index, int *y)
                 int swap = curr;
                 curr = index[j];
                 index[j] = swap;
-                y[j] = a[curr];
+                y[j] = a[swap];
             }
         }
     }

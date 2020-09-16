@@ -64,17 +64,11 @@ void inject_noise_float_onebit(float *w, int idx, int bit_idx)
 	single_bit_flip_float(x, bit_idx);
 }
 
-/*
-int main(void)
+void inject_noise_float_manybit(float *w, int idx, int bit_len, int *bit_idxs)
 {
-    float w[15];
-    for(int i=0; i<15; i++){
-        w[i] = 1;
+	float *x = &w[idx];
+    for(int i = 0; i < bit_len; i++){
+	    single_bit_flip_float(x, bit_idxs[i]);
     }
-    inject_noise_float(w, 15);
-    for(int i=0; i<15; i++){
-        printf("%f ", w[i]);
-    }
-    return 0;
 }
-*/
+

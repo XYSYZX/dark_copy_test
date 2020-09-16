@@ -17,8 +17,10 @@ void set_attack_args(network *net);
 float sign(float x);
 void sign_attacker(float *x, int *loc, int topk, float *grad, float epsilon);
 void sign_delete(float *x, int *loc, int topk, float *grad, float epsilon);
-void get_max(attack_args *attack, int **x, int **x_loc);
-
+void get_max_loss(attack_args *attack);
+void get_avf(network *net, load_args args, int type);
+void cal_avf(attack_args *a, float avg_loss);
+void get_topk_grad(attack_args *a);
 #ifdef GPU
 void sign_delete_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon);
 void sign_attacker_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon);

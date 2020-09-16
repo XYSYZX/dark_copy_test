@@ -654,7 +654,7 @@ float network_predict_search(network *net, data d)
     return (float)sum/(n*batch);
 }
 
-void get_topk_grad(float *x, float *x_gpu, int length, int *w_idx, int topk)
+void get_topk(float *x, float *x_gpu, int length, int *w_idx, int topk)
 {
     float *x_tmp = (float*)calloc(length, sizeof(float));
 #ifdef GPU
@@ -674,7 +674,7 @@ float predict_network_datum(network *net)
 {
     net->train = 1;
     forward_network(net);
-    //backward_network(net);
+    if(net->attack->sign_attack) backward_network(net);
     float error = *net->cost;
     return error;
 }

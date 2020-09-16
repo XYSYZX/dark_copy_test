@@ -37,19 +37,11 @@ float bin2dec(int *uBin)
 */
 float *single_bit_flip_float(float *w, int idx)
 {
-//    srand((unsigned)time(NULL));
-    /*
-    if(idx>=23){
-        printf("location of flipped bit is wrong!\n");
-        return;
-    }*/
-    idx = idx%33;
-    if(idx==0)
-        return w;
+    idx = idx%32;
     unsigned int b = 0x1;
     unsigned int *p;
     p = (unsigned int *)w;
-    (*p) = (*p)^(b<<(idx-1));
+    (*p) = (*p)^(b<<idx);
     return w;
 }
 

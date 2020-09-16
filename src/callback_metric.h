@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <cuda.h>
+//#include <cuda.h>
 #include <cupti.h>
 //#include "callback_metric.h"
 
@@ -81,12 +81,12 @@ static void CUPTIAPI
 bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
 {
   CUpti_Activity *record = NULL;
-  CUpti_ActivityKernel5 *kernel;
+  CUpti_ActivityKernel4 *kernel;
 
   //since we launched only 1 kernel, we should have only 1 kernel record
   CUPTI_CALL(cuptiActivityGetNextRecord(buffer, validSize, &record));
 
-  kernel = (CUpti_ActivityKernel5 *)record;
+  kernel = (CUpti_ActivityKernel4 *)record;
   if (kernel->kind != CUPTI_ACTIVITY_KIND_KERNEL) {
     fprintf(stderr, "Error: expected kernel activity record, got %d\n", (int)kernel->kind);
     exit(-1);
@@ -197,7 +197,41 @@ void CUPTIAPI getMetricValueCallback(void *userdata, CUpti_CallbackDomain domain
 #ifndef __CUPTI_PROFILER_NAME_SHORT
     #define __CUPTI_PROFILER_NAME_SHORT 128
 #endif
-char **availabel_metrics(CUdevice device, uint32_t *numMetric)
+char **get_metric_names(uint32_t *metric_num)
+{
+    *metric_num = 21;
+    const char *names[] = {
+	    	    "achieved_occupancy",
+		    "branch_efficiency",
+		    "cf_executed",
+		    "cf_fu_utilization",
+		    "cf_issued",
+		    "flop_count_sp",
+		    "flop_count_sp_add",
+		    "flop_count_sp_fma",
+		    "flop_count_sp_mul",
+		    "inst_control",
+		    "inst_executed",
+		    "inst_fp_32",
+		    "inst_integer",
+		    "inst_issued",
+		    "inst_per_warp",
+		    "single_precision_fu_utilization",
+		    "sm_efficiency",
+		    "stall_sync",
+		    "unique_warps_launched",
+		    "warp_execution_efficiency",
+		    "warp_nonpred_execution_efficiency",
+    		  };
+    char **metric_names = (char **)malloc(sizeof(char *) * (*metric_num));
+    for(int i = 0; i < *metric_num; i++){
+	metric_names[i] = (char *)malloc(sizeof(char) * __CUPTI_PROFILER_NAME_SHORT);
+	strcpy(metric_names[i], names[i]);
+    }
+    return metric_names;
+}
+
+char **availabel_metrics(CUdevice device, uint32_t *numMetric, int set_num_flag)
 {
     char **metric_names;
     size_t size;
@@ -205,31 +239,36 @@ char **availabel_metrics(CUdevice device, uint32_t *numMetric)
     CUpti_MetricValueKind metricKind;
     CUpti_MetricID *metricIdArray;
 
-    CUPTI_CALL(cuptiDeviceGetNumMetrics(device, numMetric));
-    size = sizeof(CUpti_MetricID) * (*numMetric);
-    metricIdArray = (CUpti_MetricID*)malloc(size);
-    metric_names = (char **)malloc(sizeof(char *) * (*numMetric));
-    for(int i = 0; i < (*numMetric); i++) {
-        metric_names[i] = (char *)malloc(sizeof(char) * __CUPTI_PROFILER_NAME_SHORT);
+    if(set_num_flag){
+	    metric_names = get_metric_names(numMetric);
     }
+    else{
+	    CUPTI_CALL(cuptiDeviceGetNumMetrics(device, numMetric));
+	    size = sizeof(CUpti_MetricID) * (*numMetric);
+	    metricIdArray = (CUpti_MetricID*)malloc(size);
+	    metric_names = (char **)malloc(sizeof(char *) * (*numMetric));
+	    for(int i = 0; i < (*numMetric); i++) {
+		metric_names[i] = (char *)malloc(sizeof(char) * __CUPTI_PROFILER_NAME_SHORT);
+	    }
 
-    CUPTI_CALL(cuptiDeviceEnumMetrics(device, &size, metricIdArray));
+	    CUPTI_CALL(cuptiDeviceEnumMetrics(device, &size, metricIdArray));
 
-    for(int i = 0; i < (*numMetric); i++) {
-            size = __CUPTI_PROFILER_NAME_SHORT;
-            CUPTI_CALL(cuptiMetricGetAttribute(metricIdArray[i],
-                    CUPTI_METRIC_ATTR_NAME, &size, (void *) metric_names[i]));
-            size = sizeof(CUpti_MetricValueKind);
-            CUPTI_CALL(cuptiMetricGetAttribute(metricIdArray[i],
-                    CUPTI_METRIC_ATTR_VALUE_KIND, &size, (void *)& metricKind));
-            //if ((metricKind == CUPTI_METRIC_VALUE_KIND_THROUGHPUT)
-                //|| (metricKind == CUPTI_METRIC_VALUE_KIND_UTILIZATION_LEVEL)) {
-		
-            //printf("Metric %s cannot be profiled as metric requires GPU time duration for kernel run.\n", metric_names[i]);
-            //}
-    }
-    free(metricIdArray);
-    return metric_names;
+	    for(int i = 0; i < (*numMetric); i++) {
+		    size = __CUPTI_PROFILER_NAME_SHORT;
+		    CUPTI_CALL(cuptiMetricGetAttribute(metricIdArray[i],
+			    CUPTI_METRIC_ATTR_NAME, &size, (void *) metric_names[i]));
+		    size = sizeof(CUpti_MetricValueKind);
+		    CUPTI_CALL(cuptiMetricGetAttribute(metricIdArray[i],
+			    CUPTI_METRIC_ATTR_VALUE_KIND, &size, (void *)& metricKind));
+		    //if ((metricKind == CUPTI_METRIC_VALUE_KIND_THROUGHPUT)
+			//|| (metricKind == CUPTI_METRIC_VALUE_KIND_UTILIZATION_LEVEL)) {
+			
+		    //printf("Metric %s cannot be profiled as metric requires GPU time duration for kernel run.\n", metric_names[i]);
+		    //}
+	    }
+	    free(metricIdArray);
+	}
+	return metric_names;
 }
 
 void print_metric(CUpti_MetricID id, CUpti_MetricValue value)
@@ -278,9 +317,10 @@ void print_metric_value(const char *metric_names, CUpti_MetricID metric_id, CUpt
 
 MetricData_Mul_t init_md_mul(CUdevice device)
 {
+    int set_num_flag = 1;
     MetricData_Mul_t metric_data_mul = {0};
     metric_data_mul.device = device;
-    metric_data_mul.metric_names =  availabel_metrics(metric_data_mul.device, &metric_data_mul.metric_num);
+    metric_data_mul.metric_names =  availabel_metrics(metric_data_mul.device, &metric_data_mul.metric_num, set_num_flag);
 
     metric_data_mul.metric_ids = (CUpti_MetricID*)calloc(sizeof(CUpti_MetricID), metric_data_mul.metric_num);
     metric_data_mul.metric_values = (CUpti_MetricValue*)calloc(sizeof(CUpti_MetricValue), metric_data_mul.metric_num);
