@@ -486,6 +486,35 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
     free(boxes);
 }
 
+box_label *fill_truth_attack(int count, float *truth, int classes, box_label *boxes)
+{
+    //boxes = read_boxes(labelpath, &count);
+    float x,y,w,h;
+    int id;
+    int i;
+    int sub = 0;
+
+    for (i = 0; i < count; ++i) {
+        x =  boxes[i].x;
+        y =  boxes[i].y;
+        w =  boxes[i].w;
+        h =  boxes[i].h;
+        id = boxes[i].id;
+
+        if ((w < .001 || h < .001)) {
+            ++sub;
+            continue;
+        }
+
+        truth[(i-sub)*5+0] = x;
+        truth[(i-sub)*5+1] = y;
+        truth[(i-sub)*5+2] = w;
+        truth[(i-sub)*5+3] = h;
+        truth[(i-sub)*5+4] = id;
+    }
+    //free(boxes);
+}
+
 #define NUMCHARS 37
 
 void print_letters(float *pred, int n)
@@ -1087,6 +1116,31 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
     return d;
 }
 
+data load_data_attack(char *path, int n, int w, int h, int num_box, int classes, box_label *boxes)
+{
+    data d = {0};
+    d.shallow = 0;
+
+    d.X.rows = n;   //一次加载几张图片, batch/args.threads
+    d.X.vals = calloc(d.X.rows, sizeof(float*));
+    d.X.cols = h*w*3;  //一张图片像素数
+
+    d.y = make_matrix(n, 5*(num_box));
+
+    image orig = load_image_color(path, 0, 0);
+    image sized = letterbox_image(orig, w, h);
+
+    d.X.vals[0] = sized.data;
+
+    //对相应数据的标签进行读取图像坐标高宽id
+    fill_truth_attack(num_box, d.y.vals[0], classes, boxes);
+
+    free_image(orig);
+    return d;
+}
+
+
+
 void *load_thread(void *ptr)
 {
     //printf("Loading data: %d\n", rand());
@@ -1127,6 +1181,8 @@ void *load_thread(void *ptr)
         *(a.resized) = letterbox_image(*(a.im), a.w, a.h);
     } else if (a.type == TAG_DATA){
         *a.d = load_data_tag(a.paths, a.n, a.m, a.classes, a.min, a.max, a.size, a.angle, a.aspect, a.hue, a.saturation, a.exposure);
+    } else if (a.type == ATTACK_DATA){
+        *a.d = load_data_attack(a.path, a.n, a.w, a.h, a.num_boxes, a.classes, a.boxes);
     }
     free(ptr);
     return 0;

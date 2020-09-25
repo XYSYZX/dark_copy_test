@@ -589,8 +589,14 @@ typedef struct{
 } data;
 
 typedef enum {
-    CLASSIFICATION_DATA, DETECTION_DATA, CAPTCHA_DATA, REGION_DATA, IMAGE_DATA, COMPARE_DATA, WRITING_DATA, SWAG_DATA, TAG_DATA, OLD_CLASSIFICATION_DATA, STUDY_DATA, DET_DATA, SUPER_DATA, LETTERBOX_DATA, REGRESSION_DATA, SEGMENTATION_DATA, INSTANCE_DATA, ISEG_DATA
+    CLASSIFICATION_DATA, DETECTION_DATA, CAPTCHA_DATA, REGION_DATA, IMAGE_DATA, COMPARE_DATA, WRITING_DATA, SWAG_DATA, TAG_DATA, OLD_CLASSIFICATION_DATA, STUDY_DATA, DET_DATA, SUPER_DATA, LETTERBOX_DATA, REGRESSION_DATA, SEGMENTATION_DATA, INSTANCE_DATA, ISEG_DATA, ATTACK_DATA
 } data_type;
+
+typedef struct{
+    int id;
+    float x,y,w,h;
+    float left, right, top, bottom;
+} box_label;
 
 typedef struct load_args{
     int threads;
@@ -623,14 +629,9 @@ typedef struct load_args{
     image *resized;
     data_type type;
     tree *hierarchy;
+    box_label *boxes;
+    //int num_labels;
 } load_args;
-
-typedef struct{
-    int id;
-    float x,y,w,h;
-    float left, right, top, bottom;
-} box_label;
-
 
 network *load_network(char *cfg, char *weights, int clear); // in network.c
 load_args get_base_args(network *net);                      // in network.c
@@ -765,6 +766,7 @@ void check_outputs(layer l);
 void inject_noise_float(float *w, unsigned int length);  //noise_inject.c
 void inject_noise_float_limit(float *w, unsigned int length, int *limit, int limits);
 void inject_noise_float_onebit(float *w, int idx, int bit_idx);
+void inject_noise_float_manybit(float *w, int idx, int bit_len, int *bit_idxs);
 #ifdef GPU
 void get_output_bound_gpu(layer l);
 void get_weight_bound_gpu(layer l);
@@ -775,6 +777,7 @@ void check_outputs_gpu(layer l);
 void inject_noise_float_gpu(float *w, unsigned int length);  //noise_inject_kernel
 void inject_noise_float_limit_gpu(float *w, unsigned int length, int *limit, int limits);
 void inject_noise_float_onebit_gpu(float *w_gpu, int idx, int bit_idx);
+void inject_noise_float_manybit_gpu(float *gpu, int idx, int bit_len, int *bit_idxs);
 void test_inject_noise_gpu();
 #endif
 
@@ -811,7 +814,7 @@ image get_network_image_layer(network *net, int i);
 gold_ans *create_network_boxes(int img_id, int box_num, int class_num);
 layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
-void get_topk_grad(float *x, float *x_gpu, int length, int *w_idx, int topk);
+void get_topk(float *x, float *x_gpu, int length, int *w_idx, int topk);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 void ghost_image(image source, image dest, int dx, int dy);
@@ -914,13 +917,20 @@ float rand_uniform(float min, float max);
 typedef struct attack_args{
     //network *net;
     int layer_num;
+    int iter;
     int layer_idx;
     int iter_idx;
     int k_idx;
+    int bit_idx;
 
-    int sign_attack;
-    float epsilon;
-    int reverse;
+    int sign_attack;  //FGSM攻击
+    //int progress_attack; //一次攻击好几位
+    float epsilon;    //FGSM攻击因数
+    int reverse;      //撤除攻击
+
+    float alpha;  //控制loss和accuracy占avf比例
+    float loss_thresh;  //判断loss的阈值
+    float acc_thresh;   //判断accurary的阈值
 
     int a_input;   //attack inputs, 0 or 1
     int a_weight;
@@ -928,12 +938,12 @@ typedef struct attack_args{
     int a_output;
 
     int topk;
-    /*
     int topk_inputs; //num of inputs to be attacked
     int topk_weights;
     int topk_biases;
     int topk_outputs;
-    */
+    int *topks;
+    
     int *flipped_bit;   //一个数字中要翻转的位数
     int fb_len;        //位数的长度
 
@@ -941,17 +951,35 @@ typedef struct attack_args{
     int seen_img;
     int n;  //一次看几张图片
 
+    int **grads_loc;
+    int **grads_loc_inputs;    //length: 1 * (topk * iter)
+    int **grads_loc_weights;   //length: layers * (topk * iter)
+    int **grads_loc_biases;
+    int **grads_loc_outputs;
+
     int **mloss_loc;
-    int **mloss_loc_inputs;   //长度: 1 * (topk*total_img/threads)
-    int **mloss_loc_weights; //layer1, weight1, weight2... 长度: layers * (topk*total_img/threads)
+    int **mloss_loc_inputs;   //长度: 1 * (topk)
+    int **mloss_loc_weights; //layer1, weight1, weight2... 长度: layers * (topk)
     int **mloss_loc_outputs; //layer1, output1, output2..., 长度同上
     int **mloss_loc_biases;
 
     float **mloss;
-    float **mloss_inputs; //长度: 1 * (topk*total_img/threads)
-    float **mloss_weights; //长度: layers * (topk*total_img/threads)
+    float **mloss_inputs; //长度: 1 * (topk * fb_len)
+    float **mloss_weights; //长度: layers * (topk * fb_len)
     float **mloss_biases;
     float **mloss_outputs; //长度同上
+
+    float **macc;
+    float **macc_inputs; //长度: 1 * (topk * fb_len)
+    float **macc_weights; //长度: layers * (topk * fb_len)
+    float **macc_biases;
+    float **macc_outputs; //长度同上
+
+    float **avf;
+    float **avf_inputs; //长度: 1 * (topk)
+    float **avf_weights; //长度: layers * (topk)
+    float **avf_biases;
+    float **avf_outputs; //长度同上
 
     int *len;
     int *inputs_len;    //length: 1
@@ -980,13 +1008,10 @@ typedef struct attack_args{
     float **biases_gpu;
     float **outputs;
     float **outputs_gpu;
-
-    int progress_attack;
-
 } attack_args;
 
-void attack_data(network *net, load_args args);
-void progressive_attack(network *net);
+void attack_data(network *net, load_args args, load_args val_args);
+//void progressive_attack(network *net);
 void single_attack(network *net);
 #ifdef __cplusplus
 }

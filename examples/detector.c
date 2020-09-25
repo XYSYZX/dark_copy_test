@@ -732,16 +732,17 @@ char *get_imagepath(FILE *f)
     return imagepath;
 }
 */
-void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int topk, int *flipped_bit, int bit_num, int fac, int type, int progress_attack, int sign_attack, float epsilon)
+void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *topks, int *flipped_bit, int bit_num, int progress_attack, int sign_attack, float epsilon)
 {
     list *options = read_data_cfg(datacfg);
     char *images = option_find_str(options, "train", "data/train.list");
+    char *val_images = option_find_str(options, "valid", "data/train.list");
     network *net = load_network(cfgfile, weightfile, 0); //load network
-    //net->delta = (float *)calloc(net->inputs*net->batch, sizeof(float));
-    //net->delta_gpu = cuda_make_array(0, net->inputs*net->batch);
 
     list *plist = get_paths(images);
     char **paths = (char **)list_to_array(plist);
+    list *val_plist = get_paths(val_images);
+    char **val_paths = (char **)list_to_array(val_plist);
 
     //data buffer;
 
@@ -750,8 +751,8 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int top
     load_args args = get_base_args(net);
     args.coords = l.coords;
     args.paths = paths;
-    args.n = net->batch * net->subdivisions;
-    args.m = plist->size;
+    args.n = net->batch;
+    args.m = plist->size / 20000;
     args.classes = l.classes;
     args.jitter = l.jitter;
     args.num_boxes = l.max_boxes;
@@ -759,38 +760,36 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int top
     args.type = DETECTION_DATA;
     args.threads = 1;
     
+    load_args val_args = get_base_args(net);
+    val_args.coords = l.coords;
+    val_args.paths = val_paths;
+    val_args.n = 1;
+    val_args.m = val_plist->size / 1000;
+    val_args.classes = l.classes;
+    val_args.jitter = l.jitter;
+    val_args.num_boxes = l.max_boxes;
+    //val_args.d = &buffer;
+    val_args.type = ATTACK_DATA;
+    val_args.threads = 1;
+
     attack_args attack = {0};
-    //attack.net = net;
-    attack.total_img = plist->size / fac;
-    attack.n = net->batch;
-    attack.progress_attack = progress_attack;
+    //attack.n = net->batch;
+    //attack.progress_attack = progress_attack;
     attack.sign_attack = sign_attack;
-    attack.topk = topk;
+    attack.topk_inputs = topks[0];
+    attack.topk_weights = topks[1];
+    attack.topk_biases = topks[2];
+    attack.topk_outputs = topks[3];
     attack.fb_len = bit_num;
     attack.flipped_bit = flipped_bit;
     attack.epsilon = epsilon;
     attack.reverse = 1;
+    attack.alpha = 0.5;
 
     net->bit_attack = 1;
     net->attack = &attack;
-
-    switch(type){
-        case 0:
-            attack.a_input = 1;
-            break;
-        case 1:
-            attack.a_weight = 1;
-            break;
-        case 2:
-            attack.a_bias = 1;
-            break;
-        case 3:
-            attack.a_output = 1;
-            break;
-        default:
-            printf("wrong attack type!\n");
-    }
-    attack_data(net, args);
+ 
+    attack_data(net, args, val_args);
     free_network(net);
 }
 
@@ -960,7 +959,7 @@ float validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, floa
                         detections[detections_count - 1].unique_truth_index = -1;
 
                         int truth_index = -1;
-                        float max_iou = 0;  //针对每个box里面每个prob匹配样本文件，计算max_iou
+                        float max_iou = 0;  //针对every image每个box里面每个prob匹配样本文件，计算max_iou
                         for (j = 0; j < num_labels; ++j)
                         {
                             box t = { truth[j].x, truth[j].y, truth[j].w, truth[j].h };
@@ -1697,7 +1696,7 @@ void run_detector(int argc, char **argv)
     //int noise_freq = find_int_arg(argc, argv, "-noise_freq", 1);
     float iou_thresh = find_float_arg(argc, argv, "-iou_thresh", .5);    // 0.5 for mAP
     //float thresh = find_float_arg(argc, argv, "thresh", .5);
-    int letter_box = find_arg(argc, argv, "-letter_box");
+    //int letter_box = find_arg(argc, argv, "-letter_box");
     //int class = find_int_arg(argc, argv, "-class", 0);
 
     char *rf_name = find_char_arg(argc, argv, "-rf_name", NULL);
@@ -1726,12 +1725,16 @@ void run_detector(int argc, char **argv)
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 1, 0};
 
-    int topk = find_int_arg(argc, argv, "-topk", 1);
+    int topks[4] = {0};
+    topks[0] = find_int_arg(argc, argv, "-t1", 1);
+    topks[1] = find_int_arg(argc, argv, "-t2", 1);
+    topks[2] = find_int_arg(argc, argv, "-t3", 1);
+    topks[3] = find_int_arg(argc, argv, "-t4", 1);
     //int flipped_bit = find_int_arg(argc, argv, "-flipped_bit", 0);
     int fac = find_int_arg(argc, argv, "-fac", 1);
-    int flipped_bit[] = {30, 28};
+    int flipped_bit[] = {28, 23};
     int bit_num = 2;
-    int type = find_int_arg(argc, argv, "-type", 0);
+    //int type = find_int_arg(argc, argv, "-type", 0);
     int progress_attack = find_int_arg(argc, argv, "-progress_attack", 0);
     int sign_attack = find_int_arg(argc, argv, "-sign_attack", 0);
     float epsilon = find_float_arg(argc, argv, "-epsilon", 1);
@@ -1746,7 +1749,7 @@ void run_detector(int argc, char **argv)
     else if(0==strcmp(argv[2], "weight_bound")) get_detector_weight_bound(datacfg, cfg, weights, wbound_file);
     else if(0==strcmp(argv[2], "output_bound")) get_detector_output_bound(datacfg, cfg, weights, obound_file);
     else if(0==strcmp(argv[2], "vulnerable")) vulner_detector(datacfg, cfg, weights, thresh, image_file, cost_file, bit_mode, recall, mAP);
-    else if(0==strcmp(argv[2], "bit_attack")) bit_attack_detector(datacfg, cfg, weights, topk, flipped_bit, bit_num, fac, type, progress_attack, sign_attack, epsilon);
+    else if(0==strcmp(argv[2], "bit_attack")) bit_attack_detector(datacfg, cfg, weights, topks, flipped_bit, bit_num, progress_attack, sign_attack, epsilon);
     else if(0==strcmp(argv[2], "demo")) {
         list *options = read_data_cfg(datacfg);
         int classes = option_find_int(options, "classes", 20);

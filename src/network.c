@@ -261,8 +261,7 @@ void forward_network(network *netp)
         }
         if(net.bit_attack){
             if(net.attack->a_output && net.attack->layer_idx == i){
-                if(net.attack->progress_attack) progressive_attack(&net);
-                else single_attack(&net);
+                single_attack(&net);
             }
         }
         net.input = l.output;
@@ -648,6 +647,7 @@ float network_predict_search(network *net, data d)
     float sum = 0; 
     for(i = 0; i < n; ++i){
         get_next_batch(d, batch, i*batch, net->input, net->truth);
+        //printf("last input value: %f\n", net->input[net->inputs*net->batch - 1]);
         float err = train_network_datum(net);
         sum += err;
     }
@@ -689,13 +689,9 @@ float network_predict_attack(network *net, data d)
     float sum = 0;
     for(i = 0; i < n; ++i){
         get_next_batch(d, batch, i*batch, net->input, net->truth);
+        //printf("last input value: %f\n", net->input[net->inputs*net->batch-1]);
         if(net->attack->a_input){
-            if(net->attack->progress_attack){
-                progressive_attack(net);
-            }
-            else{
-                single_attack(net);
-            }
+            single_attack(net);
         }
         float err = predict_network_datum(net);
         sum += err;
@@ -1010,8 +1006,7 @@ void forward_network_gpu(network *netp)
         }
         if(net.bit_attack){
             if(net.attack->a_output && net.attack->layer_idx == i){
-                if(net.attack->progress_attack) progressive_attack(&net);
-                else single_attack(&net);
+                single_attack(&net);
             }
         }
         net.input_gpu = l.output_gpu;

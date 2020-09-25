@@ -1,7 +1,6 @@
 #include "bit_attack.h"
-//#include <stdlib.h>
-//#include <stdio.h>
 
+extern int detections_comparator(const void *pa, const void *pb);
 
 float **make_2d_array_float(int n, int m)
 {
@@ -73,14 +72,17 @@ void set_attack_args(network *net)
     int topk;
     attack_args *a = net->attack;
     int layer_num = net->n;
-    int iter = a->iter;
     a->layer_num = layer_num;
+    int iter = a->iter;
+    int fb_len = a->fb_len;
+
     
     //input
     topk = a->topk_inputs;
     a->grads_loc_inputs = make_2d_array_int(1, topk * iter);
     a->mloss_loc_inputs = make_2d_array_int(1, topk);
-    a->mloss_inputs = make_2d_array_float(1, topk);
+    a->mloss_inputs = make_2d_array_float(1, topk * fb_len);
+    a->macc_inputs = make_2d_array_float(1, topk * fb_len);
     a->avf_inputs = make_2d_array_float(1, topk);
 
     a->inputs_len = (int *)calloc(1, sizeof(int));
@@ -100,7 +102,8 @@ void set_attack_args(network *net)
     topk = a->topk_weights;
     a->grads_loc_weights = make_2d_array_int(layer_num, topk * iter);
     a->mloss_loc_weights = make_2d_array_int(layer_num, topk);
-    a->mloss_weights = make_2d_array_float(layer_num, topk);
+    a->mloss_weights = make_2d_array_float(layer_num, topk * fb_len);
+    a->macc_weights = make_2d_array_float(layer_num, topk * fb_len);
     a->avf_weights = make_2d_array_float(layer_num, topk);
 
     a->weights_len = (int *)calloc(net->n, sizeof(int));
@@ -120,7 +123,8 @@ void set_attack_args(network *net)
     topk = a->topk_biases;
     a->grads_loc_biases = make_2d_array_int(layer_num, topk * iter);
     a->mloss_loc_biases = make_2d_array_int(layer_num, topk);
-    a->mloss_biases = make_2d_array_float(layer_num, topk);
+    a->mloss_biases = make_2d_array_float(layer_num, topk * fb_len);
+    a->macc_biases = make_2d_array_float(layer_num, topk * fb_len);
     a->avf_biases = make_2d_array_float(layer_num, topk);
 
     a->biases_len = (int *)calloc(net->n, sizeof(int));
@@ -140,7 +144,8 @@ void set_attack_args(network *net)
     topk = a->topk_outputs;
     a->grads_loc_outputs = make_2d_array_int(layer_num, topk * iter);
     a->mloss_loc_outputs = make_2d_array_int(layer_num, topk);
-    a->mloss_outputs = make_2d_array_float(layer_num, topk);
+    a->mloss_outputs = make_2d_array_float(layer_num, topk * fb_len);
+    a->macc_outputs = make_2d_array_float(layer_num, topk * fb_len);
     a->avf_outputs = make_2d_array_float(layer_num, topk);
 
     a->outputs_len = (int *)calloc(net->n, sizeof(int));
@@ -164,6 +169,7 @@ void free_attack_args(attack_args a)
         if(a.grads_loc_inputs) free_2d_array_int(a.grads_loc_inputs, 1);
         if(a.mloss_loc_inputs) free_2d_array_int(a.mloss_loc_inputs, 1);
         if(a.mloss_inputs) free_2d_array_float(a.mloss_inputs, 1);
+        if(a.macc_inputs) free_2d_array_float(a.macc_inputs, 1);
         if(a.avf_inputs) free_2d_array_float(a.avf_inputs, 1);
         if(a.inputs_len) free(a.inputs_len);
         if(a.input_grads) free(a.input_grads);
@@ -175,6 +181,7 @@ void free_attack_args(attack_args a)
         if(a.grads_loc_weights) free_2d_array_int(a.grads_loc_weights, layer_num);
         if(a.mloss_loc_weights) free_2d_array_int(a.mloss_loc_weights, layer_num);
         if(a.mloss_weights) free_2d_array_float(a.mloss_weights, layer_num);
+        if(a.macc_weights) free_2d_array_float(a.macc_weights, layer_num);
         if(a.avf_weights) free_2d_array_float(a.avf_weights, layer_num);
         if(a.weights_len) free(a.weights_len);
         if(a.weight_grads) free(a.weight_grads);
@@ -186,6 +193,7 @@ void free_attack_args(attack_args a)
         if(a.grads_loc_biases) free_2d_array_int(a.grads_loc_biases, layer_num);
         if(a.mloss_loc_biases) free_2d_array_int(a.mloss_loc_biases, layer_num);
         if(a.mloss_biases) free_2d_array_float(a.mloss_biases, layer_num);
+        if(a.macc_biases) free_2d_array_float(a.macc_biases, layer_num);
         if(a.avf_biases) free_2d_array_float(a.avf_biases, layer_num);
         if(a.biases_len) free(a.biases_len);
         if(a.bias_grads) free(a.bias_grads);
@@ -197,6 +205,7 @@ void free_attack_args(attack_args a)
         if(a.grads_loc_outputs) free_2d_array_int(a.grads_loc_outputs, layer_num);
         if(a.mloss_loc_outputs) free_2d_array_int(a.mloss_loc_outputs, layer_num);
         if(a.mloss_outputs) free_2d_array_float(a.mloss_outputs, layer_num);
+        if(a.macc_outputs) free_2d_array_float(a.macc_outputs, layer_num);
         if(a.avf_outputs) free_2d_array_float(a.avf_outputs, layer_num);
         if(a.outputs_len) free(a.outputs_len);
         if(a.output_grads) free(a.output_grads);
@@ -216,20 +225,20 @@ void attack_data(network *net, load_args args, load_args val_args)
     int iter = args.m / args.n;
     attack->iter = iter;
     set_attack_args(net);
-
+    set_batch_network(net, args.n);
 
     data val, buffer;
     args.d = &buffer;
 
     pthread_t load_thread = load_data(args);
-    attack->seen_img += attack->n;
+    attack->seen_img += args.n;
 
     for(i = 0; i < iter; i++){
         attack->iter_idx = i;
         pthread_join(load_thread, 0);
         val = buffer;
         fprintf(stderr, "images: %d\n", attack->seen_img);
-        loss += network_predict_search(net, val);
+        loss += network_predict_search(net, val) / iter;
         for(j = 0; j < attack->layer_num; j++){
             //printf("grad: %x, gpu: %x\n", attack->grads[j], attack->grads_gpu[j]);
             attack->layer_idx = j;
@@ -238,7 +247,6 @@ void attack_data(network *net, load_args args, load_args val_args)
         load_thread = load_data(args);
         attack->seen_img += args.n;
     }
-    loss /= iter;
     get_max_loss(attack);
 
     attack->seen_img = 0;
@@ -271,55 +279,6 @@ void get_topk_grad(attack_args *a)
 }
 
 
-void progressive_attack(network *net)
-{
-    
-    attack_args a = *(net->attack);
-    if(a.sign_attack){
-        if(a.a_input){
-        #ifdef GPU
-            cuda_pull_array(a.grads_gpu[a.layer_idx], a.grads[a.layer_idx], a.len[a.layer_idx]);
-        #endif
-            sign_attacker(a.x[a.layer_idx], a.mloss_loc[a.layer_idx], a.topk, a.grads[a.layer_idx], a.epsilon);
-        }
-        else{
-            if(a.reverse == 1){
-            #ifdef GPU
-                sign_attacker_gpu(a.x_gpu[a.layer_idx], a.mloss_loc[a.layer_idx], a.topk, a.grads_gpu[a.layer_idx], a.epsilon);
-            #else
-                sign_attacker(a.x[a.layer_idx], a.mloss_loc[a.layer_idx], a.topk, a.grads[a.layer_idx], a.epsilon);
-            #endif
-            }
-            else{
-            #ifdef GPU
-                sign_delete_gpu(a.x_gpu[a.layer_idx], a.mloss_loc[a.layer_idx], a.topk, a.grads_gpu[a.layer_idx], a.epsilon);
-            #else
-                sign_delete(a.x[a.layer_idx], a.mloss_loc[a.layer_idx], a.topk, a.grads[a.layer_idx], a.epsilon);
-            #endif
-            }
-        }
-    }
-    else{
-        if(a.a_input){
-            for(int i = 0; i < a.topk; i++){
-                inject_noise_float_manybit(a.x[a.layer_idx], a.mloss_loc[a.layer_idx][i], a.fb_len, a.flipped_bit);
-            }
-        }
-        else{
-            for(int i = 0; i < a.topk; i++){
-            #ifdef GPU
-                inject_noise_float_manybit_gpu(a.x_gpu[a.layer_idx], a.mloss_loc[a.layer_idx][i], a.fb_len, a.flipped_bit);
-            #else
-                inject_noise_float_manybit(a.x[a.layer_idx], a.mloss_loc[a.layer_idx][i], a.fb_len, a.flipped_bit);
-            #endif
-            }
-        }
-    }
-    if(a.a_weight || a.a_bias) {
-        net->attack->reverse *= -1;
-    }
-}
-
 void single_attack(network *net)
 {
     attack_args a = *(net->attack);
@@ -351,15 +310,22 @@ void single_attack(network *net)
     }
     else{
         if(a.a_input){
-            inject_noise_float_manybit(a.x[a.layer_idx], a.mloss_loc[a.layer_idx][offset], a.fb_len, a.flipped_bit);
+        #ifdef GPU
+            cuda_pull_array(a.grads_gpu[a.layer_idx], a.grads[a.layer_idx], a.len[a.layer_idx]);
+        #endif
+            //bit_flip_attacker(a, a.x[a.layer_idx], a.grads[a.layer_idx], a.mloss_loc[a.layer_idx][offset]);
+            bit_flip_attacker(a);
         }
         else{
         #ifdef GPU
-            inject_noise_float_manybit_gpu(a.x_gpu[a.layer_idx], a.mloss_loc[a.layer_idx][offset], a.fb_len, a.flipped_bit);
+            bit_flip_attacker_gpu(a);
         #else
-            inject_noise_float_manybit(a.x[a.layer_idx], a.mloss_loc[a.layer_idx][offset], a.fb_len, a.flipped_bit);
+            bit_flip_attacker(a);
         #endif
         }
+    }
+    if(a.a_weight || a.a_bias) {
+        net->attack->reverse *= -1;
     }
 }
 
@@ -392,6 +358,14 @@ void sign_delete(float *x, int *loc, int topk, float *grad, float epsilon)
         float x_sign = sign(grad[idx]);
         x[idx] += epsilon * x_sign;
     }
+}
+
+void bit_flip_attacker(attack_args a)
+{
+    int idx = a.mloss_loc[a.layer_idx][a.k_idx];
+    float *x = a.x[a.layer_idx];
+    int bit_idx = a.bit_idx;
+    inject_noise_float_onebit(x, idx, bit_idx);
 }
 
 void get_max_loss(attack_args *a)
@@ -442,6 +416,7 @@ void get_max_loss(attack_args *a)
             free(cal_output);
         }
     }
+    /*
     printf("input: \n");
     print_2d_array_int(a->mloss_loc_inputs, 1, a->topk_inputs);
     print_2d_array_int(mloss_freq_input, 1, a->topk_inputs);
@@ -454,6 +429,7 @@ void get_max_loss(attack_args *a)
     printf("output: \n");
     print_2d_array_int(a->mloss_loc_outputs, layer_num, a->topk_outputs);
     print_2d_array_int(mloss_freq_output, layer_num, a->topk_outputs);
+    */
     free_2d_array_int(mloss_freq_input, 1);
     free_2d_array_int(mloss_freq_weight, layer_num);
     free_2d_array_int(mloss_freq_bias, layer_num);
@@ -464,14 +440,27 @@ void get_avf(network *net, load_args args, int type)
 {
     attack_args *a = net->attack;
     float avg_loss = 0;
+    float avg_acc = 0;
     int layer_num = net->n;
 
-    int i, j, k;
-    if(a->sign_attack) args.n = net->batch;
-    int iter = args.m / args.n;
-    a->iter = iter;
+    int i, j, k, m;
+
+    //if(a->sign_attack) args.n = net->batch;
+    //int iter = args.m / args.n;
+
     data val, buffer;
     args.d = &buffer;
+
+    set_batch_network(net, args.n);
+
+    int iter = args.m / args.n;
+    a->iter = iter;
+
+    const float nms = 0.45;
+    const float thresh = 0.5;
+    const float iou_thresh = 0.5;
+    const float thresh_calc_avg_iou = 0.1;
+    int classes = net->layers[net->n-1].classes;
 
     switch(type){
         case 0:
@@ -484,6 +473,7 @@ void get_avf(network *net, load_args args, int type)
             a->x_gpu = a->inputs_gpu;
             a->topk = a->topk_inputs;
             a->mloss = a->mloss_inputs;
+            a->macc = a->macc_inputs;
             a->mloss_loc = a->mloss_loc_inputs;
             a->avf = a->avf_inputs;
             break;
@@ -497,6 +487,7 @@ void get_avf(network *net, load_args args, int type)
             a->x_gpu = a->weights_gpu;
             a->topk = a->topk_weights;
             a->mloss = a->mloss_weights;
+            a->macc = a->macc_weights;
             a->mloss_loc = a->mloss_loc_weights;
             a->avf = a->avf_weights;
             break;
@@ -510,6 +501,7 @@ void get_avf(network *net, load_args args, int type)
             a->x_gpu = a->biases_gpu;
             a->topk = a->topk_biases;
             a->mloss = a->mloss_biases;
+            a->macc = a->macc_biases;
             a->mloss_loc = a->mloss_loc_biases;
             a->avf = a->avf_biases;
             break;
@@ -523,6 +515,7 @@ void get_avf(network *net, load_args args, int type)
             a->x_gpu = a->outputs_gpu;
             a->topk = a->topk_outputs;
             a->mloss = a->mloss_outputs;
+            a->macc = a->macc_outputs;
             a->mloss_loc = a->mloss_loc_outputs;
             a->avf = a->avf_outputs;
             break;
@@ -531,34 +524,68 @@ void get_avf(network *net, load_args args, int type)
             return;
     }
 
-    pthread_t load_thread = load_data(args);
+    args.path = args.paths[0];
+    char labelpath[4096];
+    int count_boxes = 0;
+    find_replace(args.path, "images", "labels", labelpath);
+    find_replace(labelpath, "JPEGImages", "labels", labelpath);
+    find_replace(labelpath, ".jpg", ".txt", labelpath);
+    find_replace(labelpath, ".JPEG", ".txt", labelpath);
+    args.boxes = read_boxes(labelpath, &count_boxes);
+    if(count_boxes <= args.num_boxes) args.num_boxes = count_boxes;
+
+    pthread_t load_thread = load_data_in_thread(args);
+    a->seen_img += args.n;
+
     for(i = 0; i < iter; i++){
-        a->iter_idx = i;
         pthread_join(load_thread, 0);
-        fprintf(stderr, "images: %d\n", a->seen_img);
         val = buffer;
-        avg_loss += network_predict_search(net, val);
+
+        a->iter_idx = i;
+        fprintf(stderr, "images: %d\n", a->seen_img);
+        if(0){
+            printf("box_label id: \n");
+            for(int x = 0; x < args.num_boxes; x++){
+                printf("%d\t", args.boxes[x].id);
+            }
+            printf("\n");
+        }
+        avg_loss += network_predict_search(net, val) / iter;
+        int nboxes = 0;
+        detection *dets = get_network_boxes(net, net->w, net->h, thresh, .5, 0, 1, &nboxes);
+        if (nms) do_nms_sort(dets, nboxes, classes, nms);
+
+        avg_acc += cal_map(net, dets, args.boxes, nboxes, args.num_boxes, iou_thresh, thresh_calc_avg_iou) / iter;
+        free_detections(dets, nboxes);
+        //printf("avg_loss: %f, avg_acc: %f\n", avg_loss, avg_acc);
+
         for(j = 0; j < a->layer_num; j++){
             a->layer_idx = j;
             if(a->len[j] == 0) continue;
-            if(a->progress_attack){
-                if(a->a_weight || a->a_bias){
-                    progressive_attack(net);
-                }
-
-                a->mloss[j][0] += network_predict_attack(net, val);
-
-                if(a->a_weight || a->a_bias){
-                    progressive_attack(net);
-                }
-            }
-            else{
-                for(k = 0; k < a->topk; k++){
-                    a->k_idx = k;
+            for(k = 0; k < a->topk; k++){
+                a->k_idx = k;
+                for(m = 0; m < a->fb_len; m++){
+                    a->bit_idx = a->flipped_bit[m];
                     if(a->a_weight || a->a_bias){
                         single_attack(net);
                     }
-                    a->mloss[j][k] += network_predict_attack(net, val);
+
+                    a->mloss[j][a->fb_len*k+m] += network_predict_attack(net, val) / iter;
+                    int nboxes = 0;
+                    detection *dets = get_network_boxes(net, net->w, net->h, thresh, .5, 0, 1, &nboxes); 
+                    if (nms) do_nms_sort(dets, nboxes, classes, nms);
+                    if(0){
+                        printf("detection objectness: \n");
+                        for(int x = 0; x < nboxes; x++){
+                            printf("%f ", dets[x].objectness);
+                        }
+                        printf("\n");
+                    }
+
+                    a->macc[j][a->fb_len*k+m] += cal_map(net, dets, args.boxes, nboxes, args.num_boxes, iou_thresh, thresh_calc_avg_iou) / iter;
+                    free_detections(dets, nboxes);
+                    //printf("layer: %d, k: %d, bit: %d, loss: %f, acc: %f\n", j, k, a->bit_idx, a->mloss[j][a->fb_len*k+m], a->macc[j][a->fb_len*k+m]);
+
                     if(a->a_weight || a->a_bias){
                         single_attack(net);
                     }
@@ -566,17 +593,25 @@ void get_avf(network *net, load_args args, int type)
                 }
             }
         }
-        load_thread = load_data(args);
+        free(args.boxes);
+
+        args.path = args.paths[i+1];
+        char labelpath[4096];
+        int count_boxes = 0;
+        find_replace(args.path, "images", "labels", labelpath);
+        find_replace(labelpath, "JPEGImages", "labels", labelpath);
+        find_replace(labelpath, ".jpg", ".txt", labelpath);
+        find_replace(labelpath, ".JPEG", ".txt", labelpath);
+        args.boxes = read_boxes(labelpath, &count_boxes);
+        if(count_boxes <= args.num_boxes) args.num_boxes = count_boxes;
+
+        load_thread = load_data_in_thread(args);
         a->seen_img += args.n;
     }
 
-    avg_loss /= iter;
-    for(i = 0; i < a->layer_num; i++){
-        for(j = 0; j < a->topk; j++){
-            a->mloss[i][j] /= iter;
-        }
-    }
-    cal_avf(a, avg_loss);
+    a->loss_thresh = avg_loss;
+    a->acc_thresh = avg_acc;
+    cal_avf(a);
     printf("type: %d, avf: \n", type);
     print_2d_array_float(a->avf, a->layer_num, a->topk);
     if(type == 0) a->a_input = 0;
@@ -586,27 +621,199 @@ void get_avf(network *net, load_args args, int type)
     a->seen_img = 0;
 }
 
-void cal_avf(attack_args *a, float avg_loss)
+void cal_avf(attack_args *a)
 {
-    int i, j;
-    float max = 0;
-    float min = avg_loss;
+    int i, j, m;
+    float max_loss = 0;
+    float loss = 0;
+    float **losses = make_2d_array_float(a->layer_num, a->topk);
+    float max_acc = 0;
+    float acc = 0;
+    float **accs = make_2d_array_float(a->layer_num, a->topk);
+
     float **avf = a->avf;
     float **mloss = a->mloss;
+    float **macc = a->macc;
+
     for(i = 0; i < a->layer_num; i++){
+        if(a->len[i] == 0) continue;
         for(j = 0; j < a->topk; j++){
-            max = mloss[i][j] > max ? mloss[i][j]: max;
-            if(mloss[i][j] > 0 && mloss[i][j] < min){
-                printf("min is bigger!\n");
-                printf("layer: %i, min: %f, this: %f\n", i, min, mloss[i][j]);
-                //return;
+            for(m = 0; m < a->fb_len; m++){
+                if(mloss[i][j*a->fb_len+m] > a->loss_thresh) loss++;
+                if(macc[i][j*a->fb_len+m] > a->acc_thresh) acc++;
+            ;}
+            losses[i][j] = loss;
+            max_loss = loss > max_loss ? loss: max_loss;
+            loss = 0;
+            accs[i][j] = acc;
+            max_acc = acc > max_acc? acc: max_acc;
+            acc = 0;
+        }
+    }
+    printf("max loss: %f, max acc: %f\n", max_loss, max_acc);
+    for(i = 0; i < a->layer_num; i++){
+        if(a->len[i] == 0) continue;
+        for(j = 0; j < a->topk; j++){
+            avf[i][j] = (losses[i][j] / max_loss) * a->alpha + (max_acc - accs[i][j])/max_acc * (1 - a->alpha) ;
+        }
+    }
+    print_2d_array_float(mloss, a->layer_num, a->topk*a->fb_len);
+    print_2d_array_float(macc, a->layer_num, a->topk*a->fb_len);
+    //print_2d_array_float(losses, a->layer_num, a->topk);
+    //print_2d_array_float(accs, a->layer_num, a->topk);
+    free_2d_array_float(losses, a->layer_num);
+    free_2d_array_float(accs, a->layer_num);
+}
+/*
+int detections_comparator(const void *pa, const void *pb)
+{
+    box_prob a = *(const box_prob *)pa;
+    box_prob b = *(const box_prob *)pb;
+    float diff = a.p - b.p;
+    if (diff < 0) return 1;
+    else if (diff > 0) return -1;
+    return 0;
+}
+*/
+float cal_map(network *net, detection *dets, box_label *truth, int nboxes, int num_labels, float iou_thresh, float thresh_calc_avg_iou)
+{
+    int i, j;
+    int classes = net->layers[net->n-1].classes;
+
+    box_prob* detections = calloc(1, sizeof(box_prob));
+    int detections_count = 0;
+
+    int *truth_classes_count = calloc(classes, sizeof(int));
+
+    for (i = 0; i < num_labels; ++i) {
+        truth_classes_count[truth[i].id]++;   //每张图片中真实存在的物体（txt文件）
+    }
+    for(i = 0; i < nboxes; i++){
+        int class_id;
+        for (class_id = 0; class_id < classes; ++class_id) {
+            float prob = dets[i].prob[class_id];
+            if (prob > thresh_calc_avg_iou) {
+                detections_count++;
+                detections = (box_prob*)realloc(detections, detections_count * sizeof(box_prob));
+                detections[detections_count - 1].b = dets[i].bbox;
+                detections[detections_count - 1].p = prob;
+                //detections[detections_count - 1].image_index = image_index;
+                detections[detections_count - 1].class_id = class_id;
+                detections[detections_count - 1].truth_flag = 0;
+                detections[detections_count - 1].unique_truth_index = -1;
+
+                int truth_index = -1;
+                float max_iou = 0;
+                for(j = 0; j < num_labels; j++){
+                    box t = { truth[j].x, truth[j].y, truth[j].w, truth[j].h };
+                    float current_iou = box_iou(dets[i].bbox, t);
+                    if (current_iou > iou_thresh && class_id == truth[j].id) {
+                        if (current_iou > max_iou) {
+                            max_iou = current_iou;
+                            truth_index = j;
+                        }
+                    }
+                }
+                if(truth_index > -1){
+                    detections[detections_count - 1].truth_flag = 1;
+                    detections[detections_count - 1].unique_truth_index = truth_index;
+                }
             }
         }
     }
-    float factor = max - min;
-    for(i = 0; i < a->layer_num; i++){
-        for(j = 0; j < a->topk; j++){
-            if(mloss[i][j] > 0) avf[i][j] = (mloss[i][j] - min) / factor;
+    //printf("detections_count: %d\n", detections_count);
+    qsort(detections, detections_count, sizeof(box_prob), detections_comparator);
+
+    typedef struct {
+        double precision;
+        double recall;
+        int tp, fp, fn;
+    } pr_t;
+
+    // for PR-curve
+    pr_t** pr = (pr_t**)calloc(classes, sizeof(pr_t*));
+    for (i = 0; i < classes; ++i) {
+        pr[i] = (pr_t*)calloc(detections_count, sizeof(pr_t));
+    }
+    //printf("\n detections_count = %d, truth_count = %d  \n", detections_count, num_labels);
+
+    int* detection_per_class_count = (int*)calloc(classes, sizeof(int));
+    for (j = 0; j < detections_count; ++j) {
+        detection_per_class_count[detections[j].class_id]++;
+    }
+
+    int* truth_flags = (int*)calloc(num_labels, sizeof(int));
+
+    int rank;
+    for (rank = 0; rank < detections_count; ++rank) {
+        if (rank > 0) {
+            int class_id; 
+            for (class_id = 0; class_id < classes; ++class_id) {
+                pr[class_id][rank].tp = pr[class_id][rank - 1].tp;
+                pr[class_id][rank].fp = pr[class_id][rank - 1].fp;
+            }
+        }
+        box_prob d = detections[rank];
+        // if (detected && isn't detected before)
+        if (d.truth_flag == 1) {
+            if (truth_flags[d.unique_truth_index] == 0)
+            {   
+                truth_flags[d.unique_truth_index] = 1;
+                pr[d.class_id][rank].tp++;    // true-positive
+            } else
+                pr[d.class_id][rank].fp++;
+        }
+        else {
+            pr[d.class_id][rank].fp++;    // false-positive
+        }
+
+        for (i = 0; i < classes; ++i)
+        {
+            const int tp = pr[i][rank].tp;
+            const int fp = pr[i][rank].fp;
+            const int fn = truth_classes_count[i] - tp;    // false-negative = objects - true-positive
+            pr[i][rank].fn = fn;
+
+            if ((tp + fp) > 0) pr[i][rank].precision = (double)tp / (double)(tp + fp);
+            else pr[i][rank].precision = 0;
+
+            if ((tp + fn) > 0) pr[i][rank].recall = (double)tp / (double)(tp + fn);
+            else pr[i][rank].recall = 0;
+
+            if (rank == (detections_count - 1) && detection_per_class_count[i] != (tp + fp)) {    // check for last rank
+                    printf(" class_id: %d - detections = %d, tp+fp = %d, tp = %d, fp = %d \n", i, detection_per_class_count[i], tp+fp, tp, fp);
+            }
         }
     }
+
+    double mean_average_precision = 0;
+    for (i = 0; i < classes; ++i) {
+        double avg_precision = 0;
+        double last_recall = pr[i][detections_count - 1].recall;
+        double last_precision = pr[i][detections_count - 1].precision;
+        for (rank = detections_count - 2; rank >= 0; --rank)
+        {
+            double delta_recall = last_recall - pr[i][rank].recall;
+            last_recall = pr[i][rank].recall;
+
+            if (pr[i][rank].precision > last_precision) {
+                last_precision = pr[i][rank].precision;
+            }
+            avg_precision += delta_recall * last_precision;
+        }
+        mean_average_precision += avg_precision;
+    }
+    mean_average_precision = mean_average_precision / classes;
+
+    free(truth_flags);
+    for (i = 0; i < classes; ++i) {
+        free(pr[i]);
+    }
+    free(pr);
+    free(detections);
+    free(truth_classes_count);
+    free(detection_per_class_count);
+
+    return mean_average_precision;
 }
+
