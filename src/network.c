@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
+#include <thrust/sort.h>
 #include "network.h"
 #include "image.h"
 #include "data.h"
@@ -656,18 +657,18 @@ float network_predict_search(network *net, data d)
 
 void get_topk(float *x, float *x_gpu, int length, int *w_idx, int topk)
 {
-    float *x_tmp = (float*)calloc(length, sizeof(float));
+    //float *x_tmp = (float*)calloc(length, sizeof(float));
 #ifdef GPU
-    float *x_tmp_gpu = cuda_make_array_dev(0, length);
-    abs_gpu(x_gpu, x_tmp_gpu, length);
-    cuda_pull_array(x_tmp_gpu, x_tmp, length);
-    cuda_free(x_tmp_gpu);
+    //float *x_tmp_gpu = cuda_make_array_dev(0, length);
+    //abs_gpu(x_gpu, x_tmp_gpu, length);
+    //cuda_pull_array(x_tmp_gpu, x_tmp, length);
+    //cuda_free(x_tmp_gpu);
+    //get_topk_gpu(x_gpu, length, w_idx, topk);
+    get_topk_gpu(x_gpu, length, w_idx, topk);
 #else
-    abs_cpu(x, x_tmp, length);
+    abs_cpu(x, x, length);
+    top_k(x, length, topk, w_idx);
 #endif
-    //for(int i = 0; i < length; i++) printf("%f ", x_tmp[i]);
-    top_k(x_tmp, length, topk, w_idx);
-    free(x_tmp);
 }
 
 float predict_network_datum(network *net)
@@ -1395,5 +1396,7 @@ void pull_network_output(network *net)
     layer l = get_network_output_layer(net);
     cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
 }
+
+//void get_topk_gpu(float *x_gpu, int length, int *y, int topk)
 
 #endif

@@ -872,3 +872,28 @@ void save_cost(int layer_idx, int weight_idx, int bit_idx, float *cost, FILE *f)
 	fputs(temp, f);
 }
 
+int *str2int(char *f_bit, int *num)
+{
+    char *ptr = f_bit;
+    int *flipped_bit = (int *)calloc(32, sizeof(int));
+    int count = 0;
+    int str_len = strlen(f_bit);
+    int len_count = 0;
+    while(len_count < str_len){
+        char tmp[16];
+        int len = 0;
+        while(*ptr != ',' && len_count < str_len){
+            tmp[len] = *ptr;
+            len++;
+            ptr++;
+            len_count++;
+        }
+        tmp[len] = '\0';
+        flipped_bit[count] = atoi(tmp);
+        count++;
+        ptr++;
+        len_count++;
+    }
+    *num = count;
+    return flipped_bit;
+}

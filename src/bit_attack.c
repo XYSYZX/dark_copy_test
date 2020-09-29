@@ -1,3 +1,4 @@
+#include <float.h>
 #include "bit_attack.h"
 
 extern int detections_comparator(const void *pa, const void *pb);
@@ -234,25 +235,34 @@ void attack_data(network *net, load_args args, load_args val_args)
     attack->seen_img += args.n;
 
     for(i = 0; i < iter; i++){
+        double time = what_time_is_it_now();
         attack->iter_idx = i;
         pthread_join(load_thread, 0);
         val = buffer;
         fprintf(stderr, "images: %d\n", attack->seen_img);
         loss += network_predict_search(net, val) / iter;
+        fprintf(stderr, "detect time: %f\n", what_time_is_it_now() - time);
         for(j = 0; j < attack->layer_num; j++){
             //printf("grad: %x, gpu: %x\n", attack->grads[j], attack->grads_gpu[j]);
             attack->layer_idx = j;
             get_topk_grad(attack);
         }
         load_thread = load_data(args);
+        free_data(val);
         attack->seen_img += args.n;
+        fprintf(stderr, "attack time: %f\n", what_time_is_it_now() - time);
     }
     get_max_loss(attack);
 
     attack->seen_img = 0;
+    FILE *avf_fp = fopen(attack->avg_log, "w+");
+    if(!avf_fp){
+        printf("no avg file!");
+        return;
+    }
     for(i = 0; i < 4; i++){
         type = i;
-        get_avf(net, val_args, type);
+        get_avf(net, val_args, type, avf_fp);
     }
 
     free_attack_args(*attack);
@@ -436,7 +446,7 @@ void get_max_loss(attack_args *a)
     free_2d_array_int(mloss_freq_output, layer_num);
 }
 
-void get_avf(network *net, load_args args, int type)
+void get_avf(network *net, load_args args, int type, FILE *avf_fp)
 {
     attack_args *a = net->attack;
     float avg_loss = 0;
@@ -456,10 +466,10 @@ void get_avf(network *net, load_args args, int type)
     int iter = args.m / args.n;
     a->iter = iter;
 
-    const float nms = 0.45;
-    const float thresh = 0.5;
-    const float iou_thresh = 0.5;
-    const float thresh_calc_avg_iou = 0.1;
+    const float nms = 0.5;
+    const float thresh = 0.2;
+    const float iou_thresh = 0.2;
+    const float thresh_calc_avg_iou = 0.01;
     int classes = net->layers[net->n-1].classes;
 
     switch(type){
@@ -532,7 +542,7 @@ void get_avf(network *net, load_args args, int type)
     find_replace(labelpath, ".jpg", ".txt", labelpath);
     find_replace(labelpath, ".JPEG", ".txt", labelpath);
     args.boxes = read_boxes(labelpath, &count_boxes);
-    if(count_boxes <= args.num_boxes) args.num_boxes = count_boxes;
+    args.num_boxes = count_boxes;
 
     pthread_t load_thread = load_data_in_thread(args);
     a->seen_img += args.n;
@@ -543,13 +553,7 @@ void get_avf(network *net, load_args args, int type)
 
         a->iter_idx = i;
         fprintf(stderr, "images: %d\n", a->seen_img);
-        if(0){
-            printf("box_label id: \n");
-            for(int x = 0; x < args.num_boxes; x++){
-                printf("%d\t", args.boxes[x].id);
-            }
-            printf("\n");
-        }
+
         avg_loss += network_predict_search(net, val) / iter;
         int nboxes = 0;
         detection *dets = get_network_boxes(net, net->w, net->h, thresh, .5, 0, 1, &nboxes);
@@ -565,6 +569,7 @@ void get_avf(network *net, load_args args, int type)
             for(k = 0; k < a->topk; k++){
                 a->k_idx = k;
                 for(m = 0; m < a->fb_len; m++){
+                    double time = what_time_is_it_now();
                     a->bit_idx = a->flipped_bit[m];
                     if(a->a_weight || a->a_bias){
                         single_attack(net);
@@ -574,22 +579,14 @@ void get_avf(network *net, load_args args, int type)
                     int nboxes = 0;
                     detection *dets = get_network_boxes(net, net->w, net->h, thresh, .5, 0, 1, &nboxes); 
                     if (nms) do_nms_sort(dets, nboxes, classes, nms);
-                    if(0){
-                        printf("detection objectness: \n");
-                        for(int x = 0; x < nboxes; x++){
-                            printf("%f ", dets[x].objectness);
-                        }
-                        printf("\n");
-                    }
 
                     a->macc[j][a->fb_len*k+m] += cal_map(net, dets, args.boxes, nboxes, args.num_boxes, iou_thresh, thresh_calc_avg_iou) / iter;
                     free_detections(dets, nboxes);
-                    //printf("layer: %d, k: %d, bit: %d, loss: %f, acc: %f\n", j, k, a->bit_idx, a->mloss[j][a->fb_len*k+m], a->macc[j][a->fb_len*k+m]);
 
                     if(a->a_weight || a->a_bias){
                         single_attack(net);
                     }
-                    //printf("single: %f\n", attack->mloss[j][i*attack->topk + k]);
+                    fprintf(stderr, "attack time: %f\n", what_time_is_it_now() - time);
                 }
             }
         }
@@ -603,9 +600,10 @@ void get_avf(network *net, load_args args, int type)
         find_replace(labelpath, ".jpg", ".txt", labelpath);
         find_replace(labelpath, ".JPEG", ".txt", labelpath);
         args.boxes = read_boxes(labelpath, &count_boxes);
-        if(count_boxes <= args.num_boxes) args.num_boxes = count_boxes;
+        args.num_boxes = count_boxes;
 
         load_thread = load_data_in_thread(args);
+        free_data(val);
         a->seen_img += args.n;
     }
 
@@ -613,7 +611,9 @@ void get_avf(network *net, load_args args, int type)
     a->acc_thresh = avg_acc;
     cal_avf(a);
     printf("type: %d, avf: \n", type);
+    fprintf(avf_fp, "type: %d, avf: \n", type);
     print_2d_array_float(a->avf, a->layer_num, a->topk);
+    print_avf_log(a, avf_fp);
     if(type == 0) a->a_input = 0;
     if(type == 1) a->a_weight = 0;
     if(type == 2) a->a_bias = 0;
@@ -624,45 +624,88 @@ void get_avf(network *net, load_args args, int type)
 void cal_avf(attack_args *a)
 {
     int i, j, m;
-    float max_loss = 0;
-    float loss = 0;
-    float **losses = make_2d_array_float(a->layer_num, a->topk);
-    float max_acc = 0;
-    float acc = 0;
-    float **accs = make_2d_array_float(a->layer_num, a->topk);
+    int layer_num = a->layer_num;
+    int topk = a->topk;
+    int fb_len = a->fb_len;
+    float *max_loss = (float *)calloc(fb_len, sizeof(float));
+    float *min_loss = (float *)calloc(fb_len, sizeof(float));
+    float **losses = make_2d_array_float(layer_num, topk);
+    float *max_acc = (float *)calloc(fb_len, sizeof(float));
+    float *min_acc = (float *)calloc(fb_len, sizeof(float));
+    float **accs = make_2d_array_float(layer_num, topk);
+    for(i = 0; i < fb_len; i++){
+        min_loss[i] = FLT_MAX;
+        min_acc[i] = FLT_MAX;
+    }
 
     float **avf = a->avf;
     float **mloss = a->mloss;
     float **macc = a->macc;
 
-    for(i = 0; i < a->layer_num; i++){
+    float t_loss;
+    float t_acc;
+    //float loss_thresh = a->loss_thresh;
+    //float acc_thresh = a->acc_thresh;
+    //printf("former losses and accs: \n");
+    //print_2d_array_float(mloss, layer_num, topk*fb_len);
+    //print_2d_array_float(macc, layer_num, topk*fb_len);
+    for(i = 0; i < layer_num; i++){
         if(a->len[i] == 0) continue;
-        for(j = 0; j < a->topk; j++){
-            for(m = 0; m < a->fb_len; m++){
-                if(mloss[i][j*a->fb_len+m] > a->loss_thresh) loss++;
-                if(macc[i][j*a->fb_len+m] > a->acc_thresh) acc++;
-            ;}
-            losses[i][j] = loss;
-            max_loss = loss > max_loss ? loss: max_loss;
-            loss = 0;
-            accs[i][j] = acc;
-            max_acc = acc > max_acc? acc: max_acc;
-            acc = 0;
+        for(j = 0; j < topk; j++){
+            for(m = 0; m < fb_len; m++){
+                t_loss = mloss[i][j*fb_len+m];
+                t_acc = macc[i][j*fb_len+m];
+                if(isnan(t_loss)|| isinf(t_loss) || max_loss[m] < t_loss)
+                    max_loss[m] = t_loss;
+                if(isnan(t_loss)|| isinf(t_loss) || min_loss[m] > t_loss)
+                    min_loss[m] = t_loss;
+                if(isnan(t_acc)|| isinf(t_acc) || max_acc[m] < t_acc)
+                    max_acc[m] = t_acc;
+                if(isnan(t_acc)|| isinf(t_acc) || min_acc[m] > t_acc)
+                    min_acc[m] = t_acc;
+            }
         }
     }
-    printf("max loss: %f, max acc: %f\n", max_loss, max_acc);
-    for(i = 0; i < a->layer_num; i++){
+    
+    for(i = 0; i < layer_num; i++){
         if(a->len[i] == 0) continue;
-        for(j = 0; j < a->topk; j++){
-            avf[i][j] = (losses[i][j] / max_loss) * a->alpha + (max_acc - accs[i][j])/max_acc * (1 - a->alpha) ;
+        for(j = 0; j < topk; j++){
+            for(m = 0; m < fb_len; m++){
+                t_loss = mloss[i][j*fb_len+m];
+                t_acc = macc[i][j*fb_len+m];
+                if(isnan(t_loss) || isinf(t_loss) || isnan(min_loss[m]) || isinf(min_loss[m]) || isnan(max_loss[m]) || isinf(max_loss[m])) mloss[i][j*fb_len+m] = 1;
+                else if(min_loss[m] == max_loss[m]) mloss[i][j*fb_len+m] = 0.5;
+                else mloss[i][j*fb_len+m] = (mloss[i][j*fb_len+m] - min_loss[m]) / (max_loss[m] - min_loss[m]); 
+                //if(isnan(t_acc) || isinf(t_acc) || isnan(min_acc[m]) || isinf(min_acc[m]) || isnan(max_acc[m]) || isinf(max_acc[m])) macc[i][j*fb_len+m] = 1;
+                if(max_acc[m] == 0 || min_acc[m] == 0) max_acc[m] = 0;
+                else if(min_acc[m] == max_acc[m]) macc[i][j*fb_len+m] = 0.5;
+                else macc[i][j*fb_len+m] = (macc[i][j*fb_len+m] - min_acc[m]) / (max_acc[m] - min_acc[m]); 
+                losses[i][j] += mloss[i][j*fb_len+m];
+                accs[i][j] += macc[i][j*fb_len+m];
+            }
+            losses[i][j] = losses[i][j] / fb_len;
+            accs[i][j] = accs[i][j] / fb_len;
         }
     }
-    print_2d_array_float(mloss, a->layer_num, a->topk*a->fb_len);
-    print_2d_array_float(macc, a->layer_num, a->topk*a->fb_len);
-    //print_2d_array_float(losses, a->layer_num, a->topk);
-    //print_2d_array_float(accs, a->layer_num, a->topk);
-    free_2d_array_float(losses, a->layer_num);
-    free_2d_array_float(accs, a->layer_num);
+    //printf("max loss: %f, max acc: %f\n", max_loss, max_acc);
+    for(i = 0; i < layer_num; i++){
+        if(a->len[i] == 0) continue;
+        for(j = 0; j < topk; j++){
+            avf[i][j] = losses[i][j] * a->alpha + (1 - accs[i][j]) * (1 - a->alpha) ;
+        }
+    }
+    //printf("max losses and accs: \n");
+    //print_2d_array_float(mloss, layer_num, topk*fb_len);
+    //print_2d_array_float(macc, layer_num, topk*fb_len);
+    printf("losses and accs: \n");
+    print_2d_array_float(losses, layer_num, topk);
+    print_2d_array_float(accs, layer_num, topk);
+    free_2d_array_float(losses, layer_num);
+    free_2d_array_float(accs, layer_num);
+    free(max_loss);
+    free(min_loss);
+    free(max_acc);
+    free(min_acc);
 }
 /*
 int detections_comparator(const void *pa, const void *pb)
@@ -785,7 +828,14 @@ float cal_map(network *net, detection *dets, box_label *truth, int nboxes, int n
             }
         }
     }
-
+    if(0){
+        for(i = 0; i < classes; i++){
+            for(j = 0; j < detections_count; j++){
+                printf("tp: %d, fp: %d, fn: %d, prec: %f, recall: %f\n", pr[i][j].tp, pr[i][j].fp, pr[i][j].fn, pr[i][j].precision, pr[i][j].recall);
+            }
+        }
+    }
+            
     double mean_average_precision = 0;
     for (i = 0; i < classes; ++i) {
         double avg_precision = 0;
@@ -817,3 +867,12 @@ float cal_map(network *net, detection *dets, box_label *truth, int nboxes, int n
     return mean_average_precision;
 }
 
+void print_avf_log(attack_args *a, FILE *fp)
+{
+    int i, j;
+    for(i = 0; i < a->layer_num; i++){
+        for(j = 0; j < a->topk; j++)
+            fprintf(fp, "%f ", a->avf[i][j]);
+        fprintf(fp, "\n");
+    }
+}

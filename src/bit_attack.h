@@ -29,25 +29,16 @@ void sign_delete(float *x, int *loc, int topk, float *grad, float epsilon);
 void bit_flip_attacker(attack_args a);
 //void bit_flip_delete(attack_args a);
 void get_max_loss(attack_args *attack);
-void get_avf(network *net, load_args args, int type);
+void get_avf(network *net, load_args args, int type, FILE *avf_fp);
 void cal_avf(attack_args *a);
 void get_topk_grad(attack_args *a);
 float cal_map(network *net, detection *dets, box_label *truth, int nboxes, int num_labels, float iou_thresh, float thresh_calc_avg_iou);
+void print_avf_log(attack_args *a, FILE *fp);
 #ifdef GPU
-/*
-#ifdef __cplusplus
-extern "C" {
-#endif
-*/
 void sign_delete_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon);
 void sign_attacker_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon);
 //void bit_flip_delete_gpu(attack_args a, float *x_gpu, int *loc, int topk, float *grad_gpu);
 void bit_flip_attacker_gpu(attack_args a);
-/*
-#ifdef __cpluscplus
-}
-#endif
-*/
 
 #endif
 #endif

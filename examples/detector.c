@@ -732,7 +732,7 @@ char *get_imagepath(FILE *f)
     return imagepath;
 }
 */
-void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *topks, int *flipped_bit, int bit_num, int progress_attack, int sign_attack, float epsilon)
+void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *topks, char *f_bit, int progress_attack, int sign_attack, float epsilon)
 {
     list *options = read_data_cfg(datacfg);
     char *images = option_find_str(options, "train", "data/train.list");
@@ -752,7 +752,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     args.coords = l.coords;
     args.paths = paths;
     args.n = net->batch;
-    args.m = plist->size / 20000;
+    args.m = plist->size / 100;
     args.classes = l.classes;
     args.jitter = l.jitter;
     args.num_boxes = l.max_boxes;
@@ -764,7 +764,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     val_args.coords = l.coords;
     val_args.paths = val_paths;
     val_args.n = 1;
-    val_args.m = val_plist->size / 1000;
+    val_args.m = val_plist->size / 250;
     val_args.classes = l.classes;
     val_args.jitter = l.jitter;
     val_args.num_boxes = l.max_boxes;
@@ -772,6 +772,9 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     val_args.type = ATTACK_DATA;
     val_args.threads = 1;
 
+    int bit_num = 0;
+    int *flipped_bit = str2int(f_bit, &bit_num);
+    char avg_log[] = "./avf.log";
     attack_args attack = {0};
     //attack.n = net->batch;
     //attack.progress_attack = progress_attack;
@@ -780,6 +783,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     attack.topk_weights = topks[1];
     attack.topk_biases = topks[2];
     attack.topk_outputs = topks[3];
+    attack.avg_log = avg_log;
     attack.fb_len = bit_num;
     attack.flipped_bit = flipped_bit;
     attack.epsilon = epsilon;
@@ -790,6 +794,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     net->attack = &attack;
  
     attack_data(net, args, val_args);
+    free(flipped_bit);
     free_network(net);
 }
 
@@ -1695,9 +1700,6 @@ void run_detector(int argc, char **argv)
     int map_points = find_int_arg(argc, argv, "-points", 0);
     //int noise_freq = find_int_arg(argc, argv, "-noise_freq", 1);
     float iou_thresh = find_float_arg(argc, argv, "-iou_thresh", .5);    // 0.5 for mAP
-    //float thresh = find_float_arg(argc, argv, "thresh", .5);
-    //int letter_box = find_arg(argc, argv, "-letter_box");
-    //int class = find_int_arg(argc, argv, "-class", 0);
 
     char *rf_name = find_char_arg(argc, argv, "-rf_name", NULL);
     char *imf_name = find_char_arg(argc, argv, "-imf_name", NULL);
@@ -1732,8 +1734,8 @@ void run_detector(int argc, char **argv)
     topks[3] = find_int_arg(argc, argv, "-t4", 1);
     //int flipped_bit = find_int_arg(argc, argv, "-flipped_bit", 0);
     int fac = find_int_arg(argc, argv, "-fac", 1);
-    int flipped_bit[] = {28, 23};
-    int bit_num = 2;
+    //int flipped_bit[] = {28, 23};
+    char *flipped_bit = find_char_arg(argc, argv, "-flipped_bit", 0);
     //int type = find_int_arg(argc, argv, "-type", 0);
     int progress_attack = find_int_arg(argc, argv, "-progress_attack", 0);
     int sign_attack = find_int_arg(argc, argv, "-sign_attack", 0);
@@ -1749,7 +1751,7 @@ void run_detector(int argc, char **argv)
     else if(0==strcmp(argv[2], "weight_bound")) get_detector_weight_bound(datacfg, cfg, weights, wbound_file);
     else if(0==strcmp(argv[2], "output_bound")) get_detector_output_bound(datacfg, cfg, weights, obound_file);
     else if(0==strcmp(argv[2], "vulnerable")) vulner_detector(datacfg, cfg, weights, thresh, image_file, cost_file, bit_mode, recall, mAP);
-    else if(0==strcmp(argv[2], "bit_attack")) bit_attack_detector(datacfg, cfg, weights, topks, flipped_bit, bit_num, progress_attack, sign_attack, epsilon);
+    else if(0==strcmp(argv[2], "bit_attack")) bit_attack_detector(datacfg, cfg, weights, topks, flipped_bit, progress_attack, sign_attack, epsilon);
     else if(0==strcmp(argv[2], "demo")) {
         list *options = read_data_cfg(datacfg);
         int classes = option_find_int(options, "classes", 20);
