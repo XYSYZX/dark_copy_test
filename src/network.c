@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
-#include <thrust/sort.h>
+//#include <thrust/sort.h>
 #include "network.h"
 #include "image.h"
 #include "data.h"
@@ -260,11 +260,12 @@ void forward_network(network *netp)
         if(net.limit_output) {
             check_outputs(l);
         }
+        /*
         if(net.bit_attack){
             if(net.attack->a_output && net.attack->layer_idx == i){
                 single_attack(&net);
             }
-        }
+        }*/
         net.input = l.output;
         if(l.truth) {
             net.truth = l.output;
@@ -655,20 +656,20 @@ float network_predict_search(network *net, data d)
     return (float)sum/(n*batch);
 }
 
-void get_topk(float *x, float *x_gpu, int length, int *w_idx, int topk)
+void get_topk(float *x, float *x_gpu, int length, int *w_idx, float *w_val, int topk)
 {
     //float *x_tmp = (float*)calloc(length, sizeof(float));
 #ifdef GPU
     //float *x_tmp_gpu = cuda_make_array_dev(0, length);
-    //abs_gpu(x_gpu, x_tmp_gpu, length);
-    //cuda_pull_array(x_tmp_gpu, x_tmp, length);
+    abs_gpu(x_gpu, x_gpu, length);
+    cuda_pull_array(x_gpu, x, length);
     //cuda_free(x_tmp_gpu);
     //get_topk_gpu(x_gpu, length, w_idx, topk);
-    get_topk_gpu(x_gpu, length, w_idx, topk);
 #else
     abs_cpu(x, x, length);
-    top_k(x, length, topk, w_idx);
 #endif
+    //top_k(x, length, topk, w_idx);
+    top_k_float(x, length, topk, w_idx, w_val);
 }
 
 float predict_network_datum(network *net)
@@ -691,9 +692,11 @@ float network_predict_attack(network *net, data d)
     for(i = 0; i < n; ++i){
         get_next_batch(d, batch, i*batch, net->input, net->truth);
         //printf("last input value: %f\n", net->input[net->inputs*net->batch-1]);
+        /*
         if(net->attack->a_input){
             single_attack(net);
         }
+        */
         float err = predict_network_datum(net);
         sum += err;
     }
@@ -1005,11 +1008,12 @@ void forward_network_gpu(network *netp)
             check_outputs_gpu(l);
             //printf("check outputs!\n");
         }
+        /*
         if(net.bit_attack){
             if(net.attack->a_output && net.attack->layer_idx == i){
                 single_attack(&net);
             }
-        }
+        }*/
         net.input_gpu = l.output_gpu;
         net.input = l.output;
         if(l.truth) {
@@ -1397,6 +1401,5 @@ void pull_network_output(network *net)
     cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
 }
 
-//void get_topk_gpu(float *x_gpu, int length, int *y, int topk)
 
 #endif

@@ -752,19 +752,21 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     args.coords = l.coords;
     args.paths = paths;
     args.n = net->batch;
-    args.m = plist->size / 100;
+    //args.m = plist->size / 10000;
+    args.m = 10;
     args.classes = l.classes;
     args.jitter = l.jitter;
     args.num_boxes = l.max_boxes;
     //args.d = &buffer;
-    args.type = DETECTION_DATA;
+    args.type = SEQUENCE_DATA;
     args.threads = 1;
     
     load_args val_args = get_base_args(net);
     val_args.coords = l.coords;
     val_args.paths = val_paths;
     val_args.n = 1;
-    val_args.m = val_plist->size / 250;
+    //val_args.m = val_plist->size / 2000;
+    val_args.m = 10;
     val_args.classes = l.classes;
     val_args.jitter = l.jitter;
     val_args.num_boxes = l.max_boxes;
@@ -774,21 +776,21 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
 
     int bit_num = 0;
     int *flipped_bit = str2int(f_bit, &bit_num);
+    for(int i = 0; i < bit_num; i++) printf("%d ", flipped_bit[i]);
     char avg_log[] = "./avf.log";
     attack_args attack = {0};
-    //attack.n = net->batch;
     //attack.progress_attack = progress_attack;
     attack.sign_attack = sign_attack;
-    attack.topk_inputs = topks[0];
-    attack.topk_weights = topks[1];
-    attack.topk_biases = topks[2];
-    attack.topk_outputs = topks[3];
+    //attack.topk_inputs = topks[0];
+    attack.topk_weight = topks[0];
+    attack.topk_biase = topks[1];
+    //attack.topk_outputs = topks[3];
     attack.avg_log = avg_log;
     attack.fb_len = bit_num;
     attack.flipped_bit = flipped_bit;
     attack.epsilon = epsilon;
     attack.reverse = 1;
-    attack.alpha = 0.5;
+    attack.alpha = 1;
 
     net->bit_attack = 1;
     net->attack = &attack;
@@ -1727,11 +1729,13 @@ void run_detector(int argc, char **argv)
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 1, 0};
 
-    int topks[4] = {0};
+    int topks[2] = {0};
     topks[0] = find_int_arg(argc, argv, "-t1", 1);
+    printf("t1: %d\n", topks[0]);
     topks[1] = find_int_arg(argc, argv, "-t2", 1);
-    topks[2] = find_int_arg(argc, argv, "-t3", 1);
-    topks[3] = find_int_arg(argc, argv, "-t4", 1);
+    printf("t2: %d\n", topks[1]);
+    //topks[2] = find_int_arg(argc, argv, "-t3", 1);
+    //topks[3] = find_int_arg(argc, argv, "-t4", 1);
     //int flipped_bit = find_int_arg(argc, argv, "-flipped_bit", 0);
     int fac = find_int_arg(argc, argv, "-fac", 1);
     //int flipped_bit[] = {28, 23};

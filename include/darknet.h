@@ -589,7 +589,7 @@ typedef struct{
 } data;
 
 typedef enum {
-    CLASSIFICATION_DATA, DETECTION_DATA, CAPTCHA_DATA, REGION_DATA, IMAGE_DATA, COMPARE_DATA, WRITING_DATA, SWAG_DATA, TAG_DATA, OLD_CLASSIFICATION_DATA, STUDY_DATA, DET_DATA, SUPER_DATA, LETTERBOX_DATA, REGRESSION_DATA, SEGMENTATION_DATA, INSTANCE_DATA, ISEG_DATA, ATTACK_DATA
+    CLASSIFICATION_DATA, DETECTION_DATA, CAPTCHA_DATA, REGION_DATA, IMAGE_DATA, COMPARE_DATA, WRITING_DATA, SWAG_DATA, TAG_DATA, OLD_CLASSIFICATION_DATA, STUDY_DATA, DET_DATA, SUPER_DATA, LETTERBOX_DATA, REGRESSION_DATA, SEGMENTATION_DATA, INSTANCE_DATA, ISEG_DATA, ATTACK_DATA, SEQUENCE_DATA
 } data_type;
 
 typedef struct{
@@ -662,6 +662,8 @@ unsigned char *read_file(char *filename);   //utils.c
 data resize_data(data orig, int w, int h);
 data *tile_data(data orig, int divs, int size);
 data select_data(data *orig, int *inds);
+
+int *str2int(char *f_bit, int *num);
 
 void forward_network(network *net);
 void backward_network(network *net);
@@ -814,7 +816,7 @@ image get_network_image_layer(network *net, int i);
 gold_ans *create_network_boxes(int img_id, int box_num, int class_num);
 layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
-void get_topk(float *x, float *x_gpu, int length, int *w_idx, int topk);
+void get_topk(float *x, float *x_gpu, int length, int *w_idx, float *w_val, int topk);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 void ghost_image(image source, image dest, int dx, int dy);
@@ -894,7 +896,10 @@ void strip(char *s);
 float sec(clock_t clocks);
 void **list_to_array(list *l);
 void top_k(float *a, int n, int k, int *index);
-void top_k_int(int *a, int n, int k, int *index, int *y);
+void top_k_int(int *a, float *b, int n, int k, int *index, float *y);
+void top_k_float(float *a, int n, int k, int *index, float *y);
+void top_k_with_idx(float *a, int *b, int n, int k, float *x, int *y);
+void top_k_with_layer(float *a, int *b, int n, int k, int *x, int *y);
 int *read_map(char *filename);
 void error(const char *s);
 int max_index(float *a, int n);
@@ -928,6 +933,8 @@ typedef struct attack_args{
     float epsilon;    //FGSM攻击因数
     int reverse;      //撤除攻击
 
+    char *avg_log;
+
     float alpha;  //控制loss和accuracy占avf比例
     float loss_thresh;  //判断loss的阈值
     float acc_thresh;   //判断accurary的阈值
@@ -938,11 +945,15 @@ typedef struct attack_args{
     int a_output;
 
     int topk;
-    int topk_inputs; //num of inputs to be attacked
-    int topk_weights;
-    int topk_biases;
-    int topk_outputs;
+    int topk_input; //num of inputs to be attacked
+    int topk_weight;
+    int topk_bias;
+    int topk_output;
     int *topks;
+    int *topk_inputs;
+    int *topk_weights;
+    int *topk_biases;
+    int *topk_outputs;
     
     int *flipped_bit;   //一个数字中要翻转的位数
     int fb_len;        //位数的长度
@@ -957,29 +968,35 @@ typedef struct attack_args{
     int **grads_loc_biases;
     int **grads_loc_outputs;
 
+    float **grads_val;
+    float **grads_val_inputs;    //length: 1 * (topk * iter)
+    float **grads_val_weights;   //length: layers * (topk * iter)
+    float **grads_val_biases;
+    float **grads_val_outputs;
+
     int **mloss_loc;
-    int **mloss_loc_inputs;   //长度: 1 * (topk)
-    int **mloss_loc_weights; //layer1, weight1, weight2... 长度: layers * (topk)
-    int **mloss_loc_outputs; //layer1, output1, output2..., 长度同上
+    int **mloss_loc_inputs;   //长度: 2 * (topk), layer_idx1, ;layer_idx2, ...layer_idxk, idx1, idx2, ...idx_k
+    int **mloss_loc_weights; //长度: 2 * (topk)
+    int **mloss_loc_outputs; //长度同上
     int **mloss_loc_biases;
 
-    float **mloss;
-    float **mloss_inputs; //长度: 1 * (topk * fb_len)
-    float **mloss_weights; //长度: layers * (topk * fb_len)
-    float **mloss_biases;
-    float **mloss_outputs; //长度同上
+    float *mloss;
+    float *mloss_inputs; //长度: topk * fb_len
+    float *mloss_weights; //长度: topk * fb_len
+    float *mloss_biases;
+    float *mloss_outputs; //长度同上
 
-    float **macc;
-    float **macc_inputs; //长度: 1 * (topk * fb_len)
-    float **macc_weights; //长度: layers * (topk * fb_len)
-    float **macc_biases;
-    float **macc_outputs; //长度同上
+    float *macc;
+    float *macc_inputs; //长度: topk * fb_len
+    float *macc_weights; //长度: topk * fb_len
+    float *macc_biases;
+    float *macc_outputs; //长度同上
 
-    float **avf;
-    float **avf_inputs; //长度: 1 * (topk)
-    float **avf_weights; //长度: layers * (topk)
-    float **avf_biases;
-    float **avf_outputs; //长度同上
+    float *avf;
+    float *avf_inputs; //长度: topk
+    float *avf_weights; //长度: topk
+    float *avf_biases;
+    float *avf_outputs; //长度同上
 
     int *len;
     int *inputs_len;    //length: 1

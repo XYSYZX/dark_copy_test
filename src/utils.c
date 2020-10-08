@@ -250,7 +250,24 @@ void top_k(float *a, int n, int k, int *index)
     }
 }
 
-void top_k_int(int *a, int n, int k, int *index, int *y)
+void top_k_int(int *a, float *b, int n, int k, int *index, float *y)
+{
+    int i,j;
+    for(j = 0; j < k; ++j) index[j] = -1;
+    for(i = 0; i < n; ++i){
+        int curr = i;
+        for(j = 0; j < k; ++j){
+            if((index[j] < 0) || a[curr] > a[index[j]]){
+                int swap = curr;
+                curr = index[j];
+                index[j] = swap;
+                y[j] = b[swap];
+            }
+        }
+    }
+}
+
+void top_k_float(float *a, int n, int k, int *index, float *y)
 {
     int i,j;
     for(j = 0; j < k; ++j) index[j] = -1;
@@ -265,6 +282,47 @@ void top_k_int(int *a, int n, int k, int *index, int *y)
             }
         }
     }
+}
+
+void top_k_with_idx(float *a, int *b, int n, int k, float *x, int *y)
+{
+    int *index = (int *)calloc(k, sizeof(int));
+    int i,j;
+    for(j = 0; j < k; ++j) index[j] = -1;
+    for(i = 0; i < n; ++i){
+        int curr = i;
+        for(j = 0; j < k; ++j){
+            if((index[j] < 0) || a[curr] > a[index[j]]){
+                int swap = curr;
+                curr = index[j];
+                index[j] = swap;
+                x[j] = a[swap];
+                y[j] = b[swap];
+            }
+        }
+    }
+    free(index);
+}
+
+void top_k_with_layer(float *a, int *b, int n, int k, int *x, int *y)
+{
+    int *index = (int *)calloc(k, sizeof(int));
+    int i,j;
+    for(j = 0; j < k; ++j) index[j] = -1;
+    for(i = 0; i < n; ++i){
+        int curr = i;
+        for(j = 0; j < k; ++j){
+            int layer_idx = curr / k;
+            if((index[j] < 0) || a[curr] > a[index[j]]){
+                int swap = curr;
+                curr = index[j];
+                index[j] = swap;
+                x[j] = layer_idx;
+                y[j] = b[swap];
+            }
+        }
+    }
+    free(index);
 }
 
 void error(const char *s)

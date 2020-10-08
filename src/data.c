@@ -486,7 +486,7 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
     free(boxes);
 }
 
-box_label *fill_truth_attack(int count, float *truth, int classes, box_label *boxes)
+void fill_truth_attack(int count, float *truth, int classes, box_label *boxes)
 {
     //boxes = read_boxes(labelpath, &count);
     float x,y,w,h;
@@ -513,6 +513,44 @@ box_label *fill_truth_attack(int count, float *truth, int classes, box_label *bo
         truth[(i-sub)*5+4] = id;
     }
     //free(boxes);
+}
+
+void fill_truth_sequence(char *path, int num_boxes, float *truth, int classes)
+{
+    //boxes = read_boxes(labelpath, &count);
+    char labelpath[4096];
+    int count = 0;
+    find_replace(path, "images", "labels", labelpath);
+    find_replace(labelpath, "JPEGImages", "labels", labelpath);
+    find_replace(labelpath, ".jpg", ".txt", labelpath);
+    find_replace(labelpath, ".JPEG", ".txt", labelpath);
+    box_label *boxes = read_boxes(labelpath, &count);
+    if(count > num_boxes) count = num_boxes;
+
+    float x,y,w,h;
+    int id;
+    int i;
+    int sub = 0;
+
+    for (i = 0; i < count; ++i) {
+        x =  boxes[i].x;
+        y =  boxes[i].y;
+        w =  boxes[i].w;
+        h =  boxes[i].h;
+        id = boxes[i].id;
+
+        if ((w < .001 || h < .001)) {
+            ++sub;
+            continue;
+        }
+
+        truth[(i-sub)*5+0] = x;
+        truth[(i-sub)*5+1] = y;
+        truth[(i-sub)*5+2] = w;
+        truth[(i-sub)*5+3] = h;
+        truth[(i-sub)*5+4] = id;
+    }
+    free(boxes);
 }
 
 #define NUMCHARS 37
@@ -1139,6 +1177,30 @@ data load_data_attack(char *path, int n, int w, int h, int num_box, int classes,
     return d;
 }
 
+data load_data_sequence(char **paths, int n, int w, int h, int boxes, int classes)
+{
+    int i;
+    data d = {0};
+    d.shallow = 0;
+
+    d.X.rows = n;   //一次加载几张图片, batch/args.threads
+    d.X.vals = calloc(d.X.rows, sizeof(float*));
+    d.X.cols = h*w*3;  //一张图片像素数
+
+    d.y = make_matrix(n, 5*(boxes));
+    for(i = 0; i < n; i++){
+        image orig = load_image_color(paths[i], 0, 0);
+        image sized = letterbox_image(orig, w, h);
+
+        d.X.vals[i] = sized.data;
+
+        //对相应数据的标签进行读取图像坐标高宽id
+        fill_truth_sequence(paths[i], boxes, d.y.vals[i], classes);
+
+        free_image(orig);
+    }
+    return d;
+}
 
 
 void *load_thread(void *ptr)
@@ -1183,6 +1245,8 @@ void *load_thread(void *ptr)
         *a.d = load_data_tag(a.paths, a.n, a.m, a.classes, a.min, a.max, a.size, a.angle, a.aspect, a.hue, a.saturation, a.exposure);
     } else if (a.type == ATTACK_DATA){
         *a.d = load_data_attack(a.path, a.n, a.w, a.h, a.num_boxes, a.classes, a.boxes);
+    } else if (a.type == SEQUENCE_DATA){
+        *a.d = load_data_sequence(a.paths, a.n, a.w, a.h, a.num_boxes, a.classes);
     }
     free(ptr);
     return 0;

@@ -44,8 +44,9 @@ void sign_delete_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float ep
 
 void bit_flip_attacker_gpu(attack_args a)
 {
-    int idx = a.mloss_loc[a.layer_idx][a.k_idx];
-    float *x = a.x_gpu[a.layer_idx];
+    int layer_idx = a.mloss_loc[0][a.k_idx];
+    int idx = a.mloss_loc[1][a.k_idx];
+    float *x = a.x_gpu[layer_idx];
     int bit_idx = a.bit_idx;
     inject_noise_float_onebit_gpu(x, idx, bit_idx);
 }
