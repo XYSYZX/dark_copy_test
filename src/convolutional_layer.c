@@ -12,6 +12,7 @@
 #include "xnor_layer.h"
 #endif
 
+
 void swap_binary(convolutional_layer *l)
 {
     float *swap = l->weights;
