@@ -1,0 +1,7 @@
+182 180 229 211 tennis racket
+225 96 344 334 person
+119 73 130 89 person
+140 72 152 89 person
+233 50 245 74 person
+81 73 93 89 person
+6

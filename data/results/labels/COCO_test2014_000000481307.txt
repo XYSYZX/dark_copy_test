@@ -1,0 +1,7 @@
+0 383 639 456 keyboard
+170 381 443 466 keyboard
+566 403 609 443 mouse
+15 413 58 453 mouse
+17 427 56 467 mouse
+174 14 485 294 tvmonitor
+6

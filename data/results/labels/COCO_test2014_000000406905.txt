@@ -1,0 +1,4 @@
+142 479 363 561 skateboard
+199 486 299 570 skateboard
+24 32 285 433 person
+3

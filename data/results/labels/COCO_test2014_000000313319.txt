@@ -1,0 +1,6 @@
+85 50 113 72 frisbee
+79 41 125 80 frisbee
+261 346 296 418 person
+253 435 289 476 person
+376 430 411 479 person
+5

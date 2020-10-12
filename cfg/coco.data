@@ -1,0 +1,8 @@
+classes= 80
+train  = /vlsilab/z-yang/dataset/coco/trainvalno5k.txt
+#valid  = coco_testdev
+valid = /vlsilab/z-yang/dataset/coco/5k.txt
+names = data/coco.names
+backup = backup
+eval=coco
+

@@ -1,0 +1,5 @@
+476 65 639 159 umbrella
+0 98 129 218 umbrella
+511 126 617 423 person
+321 218 355 290 person
+4

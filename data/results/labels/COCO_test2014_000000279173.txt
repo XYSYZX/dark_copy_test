@@ -1,0 +1,6 @@
+2 178 130 260 tennis racket
+37 182 94 267 tennis racket
+30 205 91 245 tennis racket
+69 77 275 413 person
+445 56 588 291 person
+5

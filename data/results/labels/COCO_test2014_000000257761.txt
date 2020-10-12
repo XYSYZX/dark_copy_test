@@ -1,0 +1,4 @@
+199 291 255 376 skateboard
+160 301 288 365 skateboard
+119 142 343 337 person
+3
