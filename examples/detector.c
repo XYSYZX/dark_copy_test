@@ -753,7 +753,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     args.paths = paths;
     args.n = net->batch;
     //args.m = plist->size / 10000;
-    args.m = 10;
+    args.m = 255;
     args.classes = l.classes;
     args.jitter = l.jitter;
     args.num_boxes = l.max_boxes;
@@ -766,7 +766,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     val_args.paths = val_paths;
     val_args.n = 1;
     //val_args.m = val_plist->size / 2000;
-    val_args.m = 10;
+    val_args.m = 255;
     val_args.classes = l.classes;
     val_args.jitter = l.jitter;
     val_args.num_boxes = l.max_boxes;
@@ -783,7 +783,7 @@ void bit_attack_detector(char *datacfg, char *cfgfile, char *weightfile, int *to
     attack.sign_attack = sign_attack;
     //attack.topk_inputs = topks[0];
     attack.topk_weight = topks[0];
-    attack.topk_biase = topks[1];
+    attack.topk_bias = topks[1];
     //attack.topk_outputs = topks[3];
     attack.avg_log = avg_log;
     attack.fb_len = bit_num;

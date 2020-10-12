@@ -656,20 +656,42 @@ float network_predict_search(network *net, data d)
     return (float)sum/(n*batch);
 }
 
-void get_topk(float *x, float *x_gpu, int length, int *w_idx, float *w_val, int topk)
+void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk)
 {
-    //float *x_tmp = (float*)calloc(length, sizeof(float));
 #ifdef GPU
-    //float *x_tmp_gpu = cuda_make_array_dev(0, length);
     abs_gpu(x_gpu, x_gpu, length);
     cuda_pull_array(x_gpu, x, length);
-    //cuda_free(x_tmp_gpu);
-    //get_topk_gpu(x_gpu, length, w_idx, topk);
 #else
     abs_cpu(x, x, length);
 #endif
-    //top_k(x, length, topk, w_idx);
-    top_k_float(x, length, topk, w_idx, w_val);
+    int *y = (int *)calloc(length, sizeof(int));
+    for(int i = 0; i < length; i++) y[i] = i;
+    qsort_topk_float_int(x, y, 0, length-1, topk-1);
+    for(int i = 0; i < topk; i++) val[i] = x[i];
+    for(int i = 0; i < topk; i++) idx[i] = y[i];
+    free(y);
+}
+
+void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val)
+{
+    int *c = (int *)calloc(length, sizeof(int));
+    for(int i = 0; i < length; i++) c[i] = i;
+    qsort_topk_int_float(a, b, c, 0, length-1, topk-1);
+    for(int i = 0; i < topk; i++) idx[i] = c[i];
+    for(int i = 0; i < topk; i++) val[i] = b[i];
+    free(c);
+}
+
+void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y)
+{
+    int *layer_loc = (int *)calloc(length, sizeof(int));
+    for(int i = 0; i < length; i++){
+        layer_loc[i] = i / topk;
+    }
+    qsort_topk_with_layer(a, b, layer_loc, 0, length-1, topk-1);
+    for(int i = 0; i < topk; i++) x[i] = layer_loc[i];
+    for(int i = 0; i < topk; i++) y[i] = b[i];
+    free(layer_loc);
 }
 
 float predict_network_datum(network *net)

@@ -250,38 +250,72 @@ void top_k(float *a, int n, int k, int *index)
     }
 }
 
-void top_k_int(int *a, float *b, int n, int k, int *index, float *y)
+int partition_int_idx(int *a, float *b, int *c, int l, int r)
 {
-    int i,j;
-    for(j = 0; j < k; ++j) index[j] = -1;
-    for(i = 0; i < n; ++i){
-        int curr = i;
-        for(j = 0; j < k; ++j){
-            if((index[j] < 0) || a[curr] > a[index[j]]){
-                int swap = curr;
-                curr = index[j];
-                index[j] = swap;
-                y[j] = b[swap];
-            }
-        }
+    int x = a[l], z = c[l];
+    int m = l, n = r;
+    float y = b[l];
+    while(1){ 
+        while(n > m && a[n] <= x) n--;
+        while(m < n && a[m] >= x) m++;
+        if(m >= n) break;
+        int tmp_a = a[n];
+        float tmp_b = b[n];
+        int tmp_c = c[n];
+        a[n] = a[m];
+        b[n] = b[m];
+        c[n] = c[m];
+        a[m] = tmp_a;
+        b[m] = tmp_b;
+        c[m] = tmp_c;
     }
+    a[l] = a[n];
+    b[l] = b[n];
+    c[l] = c[n];
+    a[n] = x;
+    b[n] = y;
+    c[n] = z;
+    return n;
 }
 
-void top_k_float(float *a, int n, int k, int *index, float *y)
+void qsort_topk_int_float(int *a, float *b, int *c, int l, int r, int k)
 {
-    int i,j;
-    for(j = 0; j < k; ++j) index[j] = -1;
-    for(i = 0; i < n; ++i){
-        int curr = i;
-        for(j = 0; j < k; ++j){
-            if((index[j] < 0) || a[curr] > a[index[j]]){
-                int swap = curr;
-                curr = index[j];
-                index[j] = swap;
-                y[j] = a[swap];
-            }
-        }
+    int j = partition_int_idx(a, b, c, l ,r);
+    if(j == k){
+        return;
     }
+    return j > k? qsort_topk_int_float(a, b, c, l, j-1, k): qsort_topk_int_float(a, b, c, j+1, r, k);
+}
+
+int partition_float_idx(float *a, int *b, int l, int r)
+{
+    float x = a[l];
+    int m = l, n = r, idx = b[l];
+    while(1){ 
+        while(n > m && a[n] <= x) n--;
+        while(m < n && a[m] >= x) m++;
+        if(m >= n) break;
+        float tmp = a[n];
+        int tmp_idx = b[n];
+        a[n] = a[m];
+        b[n] = b[m];
+        a[m] = tmp;
+        b[m] = tmp_idx;
+    }
+    a[l] = a[n];
+    b[l] = b[n];
+    a[n] = x;
+    b[n] = idx;
+    return n;
+}
+
+void qsort_topk_float_int(float *a, int *b, int l, int r, int k)
+{
+    int j = partition_float_idx(a, b, l ,r);
+    if(j == k){
+        return;
+    }
+    return j > k? qsort_topk_float_int(a, b, l, j-1, k): qsort_topk_float_int(a, b, j+1, r, k);
 }
 
 void top_k_with_idx(float *a, int *b, int n, int k, float *x, int *y)
@@ -304,25 +338,71 @@ void top_k_with_idx(float *a, int *b, int n, int k, float *x, int *y)
     free(index);
 }
 
-void top_k_with_layer(float *a, int *b, int n, int k, int *x, int *y)
+int partition_float_with_layer(float *a, int *b, int *layer_loc, int l, int r)
 {
-    int *index = (int *)calloc(k, sizeof(int));
-    int i,j;
-    for(j = 0; j < k; ++j) index[j] = -1;
-    for(i = 0; i < n; ++i){
-        int curr = i;
-        for(j = 0; j < k; ++j){
-            int layer_idx = curr / k;
-            if((index[j] < 0) || a[curr] > a[index[j]]){
-                int swap = curr;
-                curr = index[j];
-                index[j] = swap;
-                x[j] = layer_idx;
-                y[j] = b[swap];
-            }
-        }
+    float x = a[l];
+    int m = l, n = r, idx = b[l], layer_idx = layer_loc[l];
+    while(1){ 
+        while(n > m && a[n] <= x) n--;
+        while(m < n && a[m] >= x) m++;
+        if(m >= n) break;
+        float tmp = a[n];
+        int tmp_idx = b[n];
+        int tmp_layer = layer_loc[n];
+        a[n] = a[m];
+        b[n] = b[m];
+        layer_loc[n] = layer_loc[m];
+        a[m] = tmp;
+        b[m] = tmp_idx;
+        layer_loc[m] = tmp_layer;
     }
-    free(index);
+    a[l] = a[n];
+    b[l] = b[n];
+    layer_loc[l] = layer_loc[n];
+    a[n] = x;
+    b[n] = idx;
+    layer_loc[n] = layer_idx;
+    return n;
+}
+
+void qsort_topk_with_layer(float *a, int *b, int *layer_loc, int l, int r, int k)
+{
+    int j = partition_float_with_layer(a, b, layer_loc, l ,r);
+    if(j == k){
+        return;
+    }
+    return j > k? qsort_topk_with_layer(a, b, layer_loc, l, j-1, k): qsort_topk_with_layer(a, b, layer_loc, j+1, r, k);
+}
+
+void qsort_with_layer(float *a, int *b, int *c, int l, int r)
+{
+    if(l >= r) return;
+    float x = a[l];
+    int y = b[l];
+    int z = c[l];
+    int m = l, n = r;
+    while(1){
+        while(m < n && a[n] <= x) n--;
+        while(m < n && a[m] >= x) m++;
+        if(m >= n) break;
+        float tmp = a[n];
+        int tmp_idx = b[n];
+        int tmp_layer = c[n];
+        a[n] = a[m];
+        b[n] = b[m];
+        c[n] = c[m];
+        a[m] = tmp;
+        b[m] = tmp_idx;
+        c[m] = tmp_layer;
+    }
+    a[l] = a[n];
+    b[l] = b[n];
+    c[l] = c[n];
+    a[n] = x;
+    b[n] = y;
+    c[n] = z;
+    qsort_with_layer(a, b, c, l, n-1);
+    qsort_with_layer(a, b, c, n+1, r);
 }
 
 void error(const char *s)
