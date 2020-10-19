@@ -33,18 +33,18 @@ void free_2d_array_int(int **x, int n)
     free(x);
 }
 
-void zero_2d_array_float(float **x, int n, int m)
+void set_2d_array_float(float **x, int n, int m, float val)
 {
     for(int i = 0; i < n; i++)
         for(int j = 0; j < m; j++)
-            x[i][j] = 0;
+            x[i][j] = val;
 }
 
-void zero_2d_array_int(int **x, int n, int m)
+void set_2d_array_int(int **x, int n, int m, int val)
 {
     for(int i = 0; i < n; i++)
         for(int j = 0; j < m; j++)
-            x[i][j] = 0;
+            x[i][j] = val;
 }
 
 void print_2d_array_int(int **x, int m, int n)
@@ -78,36 +78,26 @@ void set_attack_args(network *net)
     int fb_len = a->fb_len;
 
     
-    //input
-    /*
-    topk = a->topk_inputs;
-    a->grads_loc_inputs = make_2d_array_int(1, topk * iter);
-    a->mloss_loc_inputs = make_2d_array_int(1, topk);
-    a->mloss_inputs = make_2d_array_float(1, topk * fb_len);
-    a->macc_inputs = make_2d_array_float(1, topk * fb_len);
-    a->avf_inputs = make_2d_array_float(1, topk);
-
-    a->inputs_len = (int *)calloc(1, sizeof(int));
-    a->inputs_len[0] = net->inputs*net->batch;
-
-    a->input_grads = (float **)calloc(1, sizeof(float*));
-    a->input_grads_gpu = (float **)calloc(1, sizeof(float*));
-    a->input_grads[0] = net->delta;
-    a->input_grads_gpu[0] = net->delta_gpu;
-
-    a->inputs = (float **)calloc(1, sizeof(float*));
-    a->inputs_gpu = (float **)calloc(1, sizeof(float*));
-    a->inputs[0] = net->input;
-    a->inputs_gpu[0] = net->input_gpu;
-    */
     //weight
     topk = a->topk_weight;
     a->grads_loc_weights = make_2d_array_int(layer_num, topk * iter);
     a->grads_val_weights = make_2d_array_float(layer_num, topk * iter);
-    a->mloss_loc_weights = make_2d_array_int(2, topk);
-    a->mloss_weights = (float *)calloc(topk * fb_len, sizeof(float));
-    a->macc_weights = (float *)calloc(topk * fb_len, sizeof(float));
-    a->avf_weights = (float *)calloc(topk, sizeof(float));
+    if(a->worst){
+        a->grads_loc_weights_min = make_2d_array_int(layer_num, topk * iter);
+        a->grads_val_weights_min = make_2d_array_float(layer_num, topk * iter);
+    }
+
+    a->mloss_loc_weights = a->worst? make_2d_array_int(2, topk*2): make_2d_array_int(2, topk);
+    a->mloss_weights = a->worst? (float *)calloc(topk*2 * fb_len, sizeof(float)): (float *)calloc(topk * fb_len, sizeof(float));
+    a->macc_weights = a->worst? (float *)calloc(topk*2 * fb_len, sizeof(float)): (float *)calloc(topk * fb_len, sizeof(float));
+    a->avf_weights = a->worst? (float *)calloc(topk*2, sizeof(float)): (float *)calloc(topk*2, sizeof(float));
+
+    set_2d_array_float(a->grads_val_weights, layer_num, topk*iter, -1);
+    set_2d_array_int(a->grads_loc_weights, layer_num, topk*iter, -1);
+    if(a->worst){
+        set_2d_array_float(a->grads_val_weights_min, layer_num, topk*iter, -1);
+        set_2d_array_int(a->grads_loc_weights_min, layer_num, topk*iter, -1);
+    }
 
     a->weights_len = (int *)calloc(net->n, sizeof(int));
     for(i = 0; i < net->n; i++) a->weights_len[i] = net->layers[i].nweights;
@@ -132,10 +122,22 @@ void set_attack_args(network *net)
     topk = a->topk_bias;
     a->grads_loc_biases = make_2d_array_int(layer_num, topk * iter);
     a->grads_val_biases = make_2d_array_float(layer_num, topk * iter);
-    a->mloss_loc_biases = make_2d_array_int(2, topk);
-    a->mloss_biases = (float *)calloc(topk * fb_len, sizeof(float));
-    a->macc_biases = (float *)calloc(topk * fb_len, sizeof(float));
-    a->avf_biases = (float *)calloc(topk, sizeof(float));
+    if(a->worst){
+        a->grads_loc_biases_min = make_2d_array_int(layer_num, topk * iter);
+        a->grads_val_biases_min = make_2d_array_float(layer_num, topk * iter);
+    }
+
+    a->mloss_loc_biases = a->worst? make_2d_array_int(2, topk*2): make_2d_array_int(2, topk);
+    a->mloss_biases = a->worst? (float *)calloc(topk*2 * fb_len, sizeof(float)): (float *)calloc(topk * fb_len, sizeof(float));
+    a->macc_biases = a->worst? (float *)calloc(topk*2 * fb_len, sizeof(float)): (float *)calloc(topk * fb_len, sizeof(float));
+    a->avf_biases = a->worst? (float *)calloc(topk*2 * fb_len, sizeof(float)): (float *)calloc(topk, sizeof(float));
+
+    set_2d_array_float(a->grads_val_biases, layer_num, topk*iter, -1);
+    set_2d_array_int(a->grads_loc_biases, layer_num, topk*iter, -1);
+    if(a->worst){
+        set_2d_array_float(a->grads_val_biases_min, layer_num, topk*iter, -1);
+        set_2d_array_int(a->grads_loc_biases_min, layer_num, topk*iter, -1);
+    }
 
     a->biases_len = (int *)calloc(net->n, sizeof(int));
     for(i = 0; i < net->n; i++) a->biases_len[i] = net->layers[i].nbiases;
@@ -198,6 +200,8 @@ void free_attack_args(attack_args a)
     {
         if(a.grads_loc_weights) free_2d_array_int(a.grads_loc_weights, layer_num);
         if(a.grads_val_weights) free_2d_array_float(a.grads_val_weights, layer_num);
+        if(a.grads_loc_weights_min) free_2d_array_int(a.grads_loc_weights_min, layer_num);
+        if(a.grads_val_weights_min) free_2d_array_float(a.grads_val_weights_min, layer_num);
         if(a.mloss_loc_weights) free_2d_array_int(a.mloss_loc_weights, 2);
         if(a.mloss_weights) free(a.mloss_weights);
         if(a.macc_weights) free(a.macc_weights);
@@ -211,6 +215,8 @@ void free_attack_args(attack_args a)
     {
         if(a.grads_loc_biases) free_2d_array_int(a.grads_loc_biases, layer_num);
         if(a.grads_val_biases) free_2d_array_float(a.grads_val_biases, layer_num);
+        if(a.grads_loc_biases_min) free_2d_array_int(a.grads_loc_biases_min, layer_num);
+        if(a.grads_val_biases_min) free_2d_array_float(a.grads_val_biases_min, layer_num);
         if(a.mloss_loc_biases) free_2d_array_int(a.mloss_loc_biases, 2);
         if(a.mloss_biases) free(a.mloss_biases);
         if(a.macc_biases) free(a.macc_biases);
@@ -286,7 +292,7 @@ void attack_data(network *net, load_args args, load_args val_args)
         type = i;
         get_avf(net, val_args, type, avf_fp);
     }
-
+    fclose(avf_fp);
     free_attack_args(*attack);
 }
 
@@ -294,22 +300,21 @@ void get_topk_grad(attack_args *a)
 {
     int j = a->layer_idx;
     int i = a->iter_idx;
-    /*
-    if(j == 0){
-        if(a->input_grads[j] && a->input_grads_gpu[j]){
-            get_topk(a->input_grads[j], a->input_grads_gpu[j], a->inputs_len[j], a->grads_loc_inputs[j]+i*a->topk_inputs, a->topk_inputs);
-        }
-    }*/
+    
     if(a->weight_grads[j] && a->weight_grads_gpu[j]){
-        get_topk(a->weight_grads[j], a->weight_grads_gpu[j], a->weights_len[j], a->grads_loc_weights[j]+i*a->topk_weight, a->grads_val_weights[j]+i*a->topk_weight, a->topk_weights[j]);
+        get_topk(a->weight_grads[j], a->weight_grads_gpu[j], a->weights_len[j], a->grads_loc_weights[j]+i*a->topk_weight, a->grads_val_weights[j]+i*a->topk_weight, a->topk_weights[j], 0);
     }
     if(a->bias_grads[j] && a->bias_grads_gpu[j]){
-        get_topk(a->bias_grads[j], a->bias_grads_gpu[j], a->biases_len[j], a->grads_loc_biases[j]+i*a->topk_bias, a->grads_val_biases[j]+i*a->topk_bias, a->topk_biases[j]);
+        get_topk(a->bias_grads[j], a->bias_grads_gpu[j], a->biases_len[j], a->grads_loc_biases[j]+i*a->topk_bias, a->grads_val_biases[j]+i*a->topk_bias, a->topk_biases[j], 0);
     }
-    /*
-    if(a->output_grads[j] && a->output_grads_gpu[j]){
-        get_topk(a->output_grads[j], a->output_grads_gpu[j], a->outputs_len[j], a->grads_loc_outputs[j]+i*a->topk_outputs, a->topk_outputs);
-    }*/
+    if(a->worst){
+        if(a->weight_grads[j] && a->weight_grads_gpu[j]){
+            get_topk(a->weight_grads[j], a->weight_grads_gpu[j], a->weights_len[j], a->grads_loc_weights_min[j]+i*a->topk_weight, a->grads_val_weights_min[j]+i*a->topk_weight, a->topk_weights[j], 1);
+        }
+        if(a->bias_grads[j] && a->bias_grads_gpu[j]){
+            get_topk(a->bias_grads[j], a->bias_grads_gpu[j], a->biases_len[j], a->grads_loc_biases_min[j]+i*a->topk_bias, a->grads_val_biases_min[j]+i*a->topk_bias, a->topk_biases[j], 1);
+        }
+    }
 }
 
 
@@ -406,10 +411,19 @@ void get_max_loss(attack_args *a)
     int iter = a->iter;
     //int *mloss_freq_weights = (int *)calloc(layer_num, a->topk_weights, sizeof(int));
     //int *mloss_freq_biases = (int *)calloc(layer_num, a->topk_biases, sizeof(int));
-    float *mloss_val_weights = (float *)calloc(layer_num * a->topk_weight, sizeof(float));
-    float *mloss_val_biases = (float *)calloc(layer_num * a->topk_bias, sizeof(float));
-    int *mloss_loc_weights = (int *)calloc(layer_num * a->topk_weight, sizeof(int));
-    int *mloss_loc_biases = (int *)calloc(layer_num * a->topk_bias, sizeof(int));
+    float *maxloss_val_weights = (float *)calloc(layer_num * a->topk_weight, sizeof(float));
+    float *maxloss_val_biases = (float *)calloc(layer_num * a->topk_bias, sizeof(float));
+    int *maxloss_loc_weights = (int *)calloc(layer_num * a->topk_weight, sizeof(int));
+    int *maxloss_loc_biases = (int *)calloc(layer_num * a->topk_bias, sizeof(int));
+    float *minloss_val_weights = (float *)calloc(layer_num * a->topk_weight, sizeof(float));
+    float *minloss_val_biases = (float *)calloc(layer_num * a->topk_bias, sizeof(float));
+    int *minloss_loc_weights = (int *)calloc(layer_num * a->topk_weight, sizeof(int));
+    int *minloss_loc_biases = (int *)calloc(layer_num * a->topk_bias, sizeof(int));
+    
+    for(i = 0; i < layer_num*a->topk_weight; i++) minloss_val_weights[i] = FLT_MAX;
+    for(i = 0; i < layer_num*a->topk_bias; i++) minloss_val_biases[i] = FLT_MAX;
+    for(i = 0; i < layer_num*a->topk_weight; i++) maxloss_val_weights[i] = -1;
+    for(i = 0; i < layer_num*a->topk_bias; i++) maxloss_val_biases[i] = -1;
 
     int count = 0;
 
@@ -417,87 +431,161 @@ void get_max_loss(attack_args *a)
         if(a->weights_len[i]){
             count = i * a->topk_weight;
             if(1){
-                //printf("length of weights_len[i]: %d\n", a->weights_len[i]);
                 int *count_weight = (int *)calloc(a->weights_len[i], sizeof(int));
                 float *val_weight = (float *)calloc(a->weights_len[i], sizeof(float));
-                for(j = 0; j < iter * a->topk_weight ; j++){
-                    if(a->grads_loc_weights[i][j] > 0){
+                int len = iter * a->topk_weight;
+                for(j = 0; j < len ; j++){
+                    if(a->grads_loc_weights[i][j] >= 0){
                         count_weight[a->grads_loc_weights[i][j]] += 1;
                         val_weight[a->grads_loc_weights[i][j]] += a->grads_val_weights[i][j];
                     }
                 }
-                for(j = 0; j < iter * a->topk_weight; j++){
-                    if(a->grads_loc_weights[i][j] > 0){
+                for(j = 0; j < len; j++){
+                    if(a->grads_loc_weights[i][j] >= 0){
                         val_weight[a->grads_loc_weights[i][j]] /= count_weight[a->grads_loc_weights[i][j]];
                     }
                 }
-                get_topk_int(count_weight, val_weight, a->weights_len[i], a->topk_weights[i], mloss_loc_weights+count, mloss_val_weights+count);
+                get_topk_int(count_weight, val_weight, a->weights_len[i], a->topk_weights[i], maxloss_loc_weights+count, maxloss_val_weights+count, 0);
+
+                if(a->worst){
+                    for(int k = 0; k < a->weights_len[i]; k++){
+                        count_weight[i] = 0;
+                        val_weight[i] = 0;
+                    }
+                    for(j = 0; j < len ; j++){
+                        if(a->grads_loc_weights_min[i][j] >= 0){
+                            count_weight[a->grads_loc_weights_min[i][j]] += 1;
+                            val_weight[a->grads_loc_weights_min[i][j]] += a->grads_val_weights_min[i][j];
+                        }
+                    }
+                    for(j = 0; j < len; j++){
+                        if(a->grads_loc_weights_min[i][j] >= 0){
+                            val_weight[a->grads_loc_weights_min[i][j]] /= count_weight[a->grads_loc_weights_min[i][j]];
+                        }
+                    }
+                    get_topk_int(count_weight, val_weight, a->weights_len[i], a->topk_weights[i], minloss_loc_weights+count, minloss_val_weights+count, 1);
+                }
                 free(count_weight);
                 free(val_weight);
             }
+            /*
             if(0){
                 top_k_with_idx(a->grads_val_weights[i], a->grads_loc_weights[i], iter*a->topk_weight, a->topk_weights[i], mloss_val_weights + count, mloss_loc_weights + count);
-            }
+            }*/
         }
+
         if(a->biases_len[i]){
             count = i * a->topk_bias;
             if(1){
-                //printf("length of biases_len[i]: %d\n", a->biases_len[i]);
                 int *count_bias = (int *)calloc(a->biases_len[i], sizeof(int));
                 float *val_bias = (float *)calloc(a->biases_len[i], sizeof(float));
-                for(j = 0; j < iter * a->topk_bias ; j++){
-                    //printf("count_bias idx: %d\n", a->grads_loc_biases[i][j]);
-                    if(a->grads_loc_biases[i][j] > 0){
+                int len = iter * a->topk_bias;
+                for(j = 0; j < len; j++){
+                    if(a->grads_loc_biases[i][j] >= 0){
                         count_bias[a->grads_loc_biases[i][j]] += 1;
                         val_bias[a->grads_loc_biases[i][j]] += a->grads_val_biases[i][j];
                     }
                 }
-                for(j = 0; j < iter * a->topk_bias ; j++){
-                    if(a->grads_loc_biases[i][j] > 0){
+                for(j = 0; j < len; j++){
+                    if(a->grads_loc_biases[i][j] >= 0){
                         val_bias[a->grads_loc_biases[i][j]] /= count_bias[a->grads_loc_biases[i][j]];
                     }
                 }
-                get_topk_int(count_bias, val_bias, a->biases_len[i], a->topk_biases[i], mloss_loc_biases+count, mloss_val_biases+count);
+                get_topk_int(count_bias, val_bias, a->biases_len[i], a->topk_biases[i], maxloss_loc_biases+count, maxloss_val_biases+count, 0);
+
+                if(a->worst){
+                    for(int k = 0; k < a->biases_len[i]; k++){
+                        count_bias[i] = 0;
+                        val_bias[i] = 0;
+                    }
+                    for(j = 0; j < len; j++){
+                        if(a->grads_loc_biases_min[i][j] >= 0){
+                            count_bias[a->grads_loc_biases_min[i][j]] += 1;
+                            val_bias[a->grads_loc_biases_min[i][j]] += a->grads_val_biases_min[i][j];
+                        }
+                    }
+                    for(j = 0; j < len; j++){
+                        if(a->grads_loc_biases_min[i][j] >= 0){
+                            val_bias[a->grads_loc_biases_min[i][j]] /= count_bias[a->grads_loc_biases_min[i][j]];
+                        }
+                    }
+                    get_topk_int(count_bias, val_bias, a->biases_len[i], a->topk_biases[i], minloss_loc_biases+count, minloss_val_biases+count, 1);
+                }
                 free(count_bias);
                 free(val_bias);
             }
+            /*
             if(0){
                 top_k_with_idx(a->grads_val_biases[i], a->grads_loc_biases[i], iter*a->topk_bias, a->topk_biases[i], mloss_val_biases + count, mloss_loc_biases + count);
-            }
+            }*/
         }
     }
-    
-    printf("value and loc of bias\n");
+    /*
+    printf("min value and loc of bias\n");
     for(int i = 0; i < layer_num; i++){
         for(int j = 0; j < a->topk_bias; j++){
-            printf("%f ", mloss_val_biases[i*a->topk_bias+j]);
+            printf("%f ", minloss_val_biases[i*a->topk_bias+j]);
         }
         printf("\n");
     }
     for(int i = 0; i < layer_num; i++){
         for(int j = 0; j < a->topk_bias; j++){
-            printf("%d ", mloss_loc_biases[i*a->topk_bias+j]);
+            printf("%d ", minloss_loc_biases[i*a->topk_bias+j]);
         }
         printf("\n");
-    }
+    }*/
     
-    get_topk_with_layer(mloss_val_weights, mloss_loc_weights, a->topk_weight*layer_num, a->topk_weight, a->mloss_loc_weights[0], a->mloss_loc_weights[1]);
-    get_topk_with_layer(mloss_val_biases, mloss_loc_biases, a->topk_bias*layer_num, a->topk_bias, a->mloss_loc_biases[0], a->mloss_loc_biases[1]);
-    qsort_with_layer(mloss_val_weights, a->mloss_loc_weights[0], a->mloss_loc_weights[1], 0, a->topk_weight-1);
-    qsort_with_layer(mloss_val_biases, a->mloss_loc_biases[0], a->mloss_loc_biases[1], 0, a->topk_bias-1);
+    int offset_weight = a->topk_weight;
+    int offset_bias = a->topk_bias;
+    get_topk_with_layer(maxloss_val_weights, maxloss_loc_weights, a->topk_weight*layer_num, a->topk_weight, a->mloss_loc_weights[0], a->mloss_loc_weights[1], 0);
+    get_topk_with_layer(maxloss_val_biases, maxloss_loc_biases, a->topk_bias*layer_num, a->topk_bias, a->mloss_loc_biases[0], a->mloss_loc_biases[1], 0);
+    if(a->worst){
+        get_topk_with_layer(minloss_val_weights, minloss_loc_weights, a->topk_weight*layer_num, a->topk_weight, a->mloss_loc_weights[0]+offset_weight, a->mloss_loc_weights[1]+offset_weight, 1);
+        get_topk_with_layer(minloss_val_biases, minloss_loc_biases, a->topk_bias*layer_num, a->topk_bias, a->mloss_loc_biases[0]+offset_bias, a->mloss_loc_biases[1]+offset_bias, 1);
+    }
 
-    printf("max layer loc of bias\n");
-    for(i = 0; i < a->topk_bias; i++) printf("%f ", mloss_val_biases[i]);
-    printf("\n");
+    if(0){
+        char grad_log[] = "./gradient.log";
+        FILE *grad_fp = fopen(grad_log, "w+");
+        fprintf(grad_fp, "max layer loc of weights\n");
+        for(i = 0; i < a->topk_weight; i++) fprintf(grad_fp, "%f ", maxloss_val_weights[i]);
+        fprintf(grad_fp, "\n");
+        fprintf(grad_fp, "max layer loc of biases\n");
+        for(i = 0; i < a->topk_bias; i++) fprintf(grad_fp, "%f ", maxloss_val_biases[i]);
+        fprintf(grad_fp, "\n");
+
+        fprintf(grad_fp, "min layer loc of weights\n");
+        for(i = 0; i < a->topk_weight; i++) fprintf(grad_fp, "%f ", minloss_val_weights[i]);
+        fprintf(grad_fp, "\n");
+        fprintf(grad_fp, "min layer loc of biases\n");
+        for(i = 0; i < a->topk_bias; i++) fprintf(grad_fp, "%f ", minloss_val_biases[i]);
+        fprintf(grad_fp, "\n");
+        fclose(grad_fp);
+    }
+    
+    printf("max/min layer loc of bias\n");
+    //for(i = 0; i < a->topk_bias; i++) printf("%f ", maxloss_val_biases[i]);
+    //printf("\n");
     for(i = 0; i < a->topk_bias; i++) printf("%d ", a->mloss_loc_biases[0][i]);
     printf("\n");
     for(i = 0; i < a->topk_bias; i++) printf("%d ", a->mloss_loc_biases[1][i]);
     printf("\n");
+
+    //for(i = 0; i < a->topk_bias; i++) printf("%f ", minloss_val_biases[i]);
+    //printf("\n");
+    for(i = 0; i < a->topk_bias; i++) printf("%d ", a->mloss_loc_biases[0][i+offset_bias]);
+    printf("\n");
+    for(i = 0; i < a->topk_bias; i++) printf("%d ", a->mloss_loc_biases[1][i+offset_bias]);
+    printf("\n");
     
-    free(mloss_val_weights);
-    free(mloss_val_biases);
-    free(mloss_loc_weights);
-    free(mloss_loc_biases);
+    free(maxloss_val_weights);
+    free(maxloss_val_biases);
+    free(maxloss_loc_weights);
+    free(maxloss_loc_biases);
+    free(minloss_val_weights);
+    free(minloss_val_biases);
+    free(minloss_loc_weights);
+    free(minloss_loc_biases);
     //free_2d_array_int(mloss_freq_output, layer_num);
 }
 
@@ -561,6 +649,8 @@ void get_avf(network *net, load_args args, int type, FILE *avf_fp)
             return;
     }
 
+    int topk = a->worst? 2*a->topk: a->topk;
+
     args.path = args.paths[0];
     char labelpath[4096];
     int count_boxes = 0;
@@ -590,7 +680,7 @@ void get_avf(network *net, load_args args, int type, FILE *avf_fp)
         free_detections(dets, nboxes);
         //printf("avg_loss: %f, avg_acc: %f\n", avg_loss, avg_acc);
 
-        for(k = 0; k < a->topk; k++){
+        for(k = 0; k < topk; k++){
             a->k_idx = k;
             for(m = 0; m < a->fb_len; m++){
                 //double time = what_time_is_it_now();
@@ -636,21 +726,19 @@ void get_avf(network *net, load_args args, int type, FILE *avf_fp)
     fprintf(avf_fp, "type: %d\n", type);
     cal_avf(a, avf_fp);
     {
-        for(i = 0; i < a->topk; i++) printf("%f ", a->avf[i]);
+        for(i = 0; i < topk; i++) printf("%f ", a->avf[i]);
         printf("\n");
     }
     print_avf_log(a, avf_fp);
-    //if(type == 0) a->a_input = 0;
     if(type == 0) a->a_weight = 0;
     if(type == 1) a->a_bias = 0;
-    //if(type == 3) a->a_output = 0;
     a->seen_img = 0;
 }
 
 void cal_avf(attack_args *a, FILE *fp)
 {
     int i, j, m;
-    int topk = a->topk;
+    int topk = a->worst? 2*a->topk: a->topk;
     int fb_len = a->fb_len;
     float *max_loss = (float *)calloc(fb_len, sizeof(float));
     float *min_loss = (float *)calloc(fb_len, sizeof(float));
@@ -895,8 +983,9 @@ float cal_map(network *net, detection *dets, box_label *truth, int nboxes, int n
 void print_avf_log(attack_args *a, FILE *fp)
 {
     int i;
+    int topk = a->worst? 2*a->topk: a->topk;
     fprintf(fp, "avf: \n");
-    for(i = 0; i < a->topk; i++)
+    for(i = 0; i < topk; i++)
         fprintf(fp, "%f ", a->avf[i]);
     fprintf(fp, "\n");
 }

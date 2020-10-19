@@ -816,9 +816,9 @@ image get_network_image_layer(network *net, int i);
 gold_ans *create_network_boxes(int img_id, int box_num, int class_num);
 layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
-void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk);
-void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val);
-void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y);
+void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk, int worst);
+void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val, int worst);
+void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y, int worst);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 void ghost_image(image source, image dest, int dx, int dy);
@@ -898,11 +898,10 @@ void strip(char *s);
 float sec(clock_t clocks);
 void **list_to_array(list *l);
 void top_k(float *a, int n, int k, int *index);
-void qsort_topk_int_float(int *a, float *b, int *c, int l, int r, int k);
-void qsort_topk_float_int(float *a, int *b, int l, int r, int k);
+//void qsort_topk_int_float(int *a, float *b, int *c, int l, int r, int k, int reverse);
+//void qsort_topk_float_int(float *a, int *b, int l, int r, int k, int reverse);
 void top_k_with_idx(float *a, int *b, int n, int k, float *x, int *y);
-void qsort_topk_with_layer(float *a, int *b, int *layer_loc, int l, int r, int k);
-void qsort_with_layer(float *a, int *b, int *c, int l, int r);
+//void qsort_with_layer(float *a, int *b, int *c, int l, int r, int reverse);
 int *read_map(char *filename);
 void error(const char *s);
 int max_index(float *a, int n);
@@ -935,6 +934,7 @@ typedef struct attack_args{
     //int progress_attack; //一次攻击好几位
     float epsilon;    //FGSM攻击因数
     int reverse;      //撤除攻击
+    int worst;
 
     char *avg_log;
 
@@ -971,27 +971,39 @@ typedef struct attack_args{
     int **grads_loc_biases;
     int **grads_loc_outputs;
 
+    int **grads_loc_min;
+    int **grads_loc_inputs_min;    //length: 1 * (topk * iter)
+    int **grads_loc_weights_min;   //length: layers * (topk * iter)
+    int **grads_loc_biases_min;
+    int **grads_loc_outputs_min;
+
     float **grads_val;
     float **grads_val_inputs;    //length: 1 * (topk * iter)
     float **grads_val_weights;   //length: layers * (topk * iter)
     float **grads_val_biases;
     float **grads_val_outputs;
 
+    float **grads_val_min;
+    float **grads_val_inputs_min;    //length: 1 * (topk * iter)
+    float **grads_val_weights_min;   //length: layers * (topk * iter)
+    float **grads_val_biases_min;
+    float **grads_val_outputs_min;
+
     int **mloss_loc;
-    int **mloss_loc_inputs;   //长度: 2 * (topk), layer_idx1, ;layer_idx2, ...layer_idxk, idx1, idx2, ...idx_k
-    int **mloss_loc_weights; //长度: 2 * (topk)
+    int **mloss_loc_inputs;   //长度: 2 * (topk*2), layer_idx1, ;layer_idx2, ...layer_idxk, idx1, idx2, ...idx_k
+    int **mloss_loc_weights; //长度: 2 * (topk*2)
     int **mloss_loc_outputs; //长度同上
     int **mloss_loc_biases;
 
     float *mloss;
-    float *mloss_inputs; //长度: topk * fb_len
-    float *mloss_weights; //长度: topk * fb_len
+    float *mloss_inputs; //长度: topk*2 * fb_len
+    float *mloss_weights; //长度: topk*2 * fb_len
     float *mloss_biases;
     float *mloss_outputs; //长度同上
 
     float *macc;
-    float *macc_inputs; //长度: topk * fb_len
-    float *macc_weights; //长度: topk * fb_len
+    float *macc_inputs; //长度: topk*2 * fb_len
+    float *macc_weights; //长度: topk*2 * fb_len
     float *macc_biases;
     float *macc_outputs; //长度同上
 

@@ -32,6 +32,7 @@
 #include "shortcut_layer.h"
 #include "parser.h"
 #include "data.h"
+#include "sort.h"
 //#include "noise_inject.h"
 load_args get_base_args(network *net)//get basic arguments of network
 {
@@ -656,7 +657,7 @@ float network_predict_search(network *net, data d)
     return (float)sum/(n*batch);
 }
 
-void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk)
+void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk, int worst)
 {
 #ifdef GPU
     abs_gpu(x_gpu, x_gpu, length);
@@ -666,31 +667,35 @@ void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk
 #endif
     int *y = (int *)calloc(length, sizeof(int));
     for(int i = 0; i < length; i++) y[i] = i;
-    qsort_topk_float_int(x, y, 0, length-1, topk-1);
-    for(int i = 0; i < topk; i++) val[i] = x[i];
-    for(int i = 0; i < topk; i++) idx[i] = y[i];
+    //if(worst) qsort_botk_float_int(x, y, 0, length-1, topk-1);
+    //qsort_topk_float_int(x, y, 0, length-1, topk-1, worst);
+    heapsort_topk_float_int(x, y, length, topk, worst, idx, val);
+    //for(int i = 0; i < topk; i++) val[i] = x[i];
+    //for(int i = 0; i < topk; i++) idx[i] = y[i];
     free(y);
 }
 
-void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val)
+void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val, int worst)
 {
     int *c = (int *)calloc(length, sizeof(int));
     for(int i = 0; i < length; i++) c[i] = i;
-    qsort_topk_int_float(a, b, c, 0, length-1, topk-1);
-    for(int i = 0; i < topk; i++) idx[i] = c[i];
-    for(int i = 0; i < topk; i++) val[i] = b[i];
+    //qsort_topk_int_float(a, b, c, 0, length-1, topk-1, worst);
+    heapsort_topk_int_float(a, b, c, length, topk, worst, idx, val);
+    //for(int i = 0; i < topk; i++) idx[i] = c[i];
+    //for(int i = 0; i < topk; i++) val[i] = b[i];
     free(c);
 }
 
-void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y)
+void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y, int worst)
 {
     int *layer_loc = (int *)calloc(length, sizeof(int));
     for(int i = 0; i < length; i++){
         layer_loc[i] = i / topk;
     }
-    qsort_topk_with_layer(a, b, layer_loc, 0, length-1, topk-1);
-    for(int i = 0; i < topk; i++) x[i] = layer_loc[i];
-    for(int i = 0; i < topk; i++) y[i] = b[i];
+    //qsort_with_layer(a, b, layer_loc, 0, length-1, worst);
+    heapsort_topk_with_layer(a, b, layer_loc, length, topk, worst, x, y);
+    //for(int i = 0; i < topk; i++) x[i] = layer_loc[i];
+    //for(int i = 0; i < topk; i++) y[i] = b[i];
     free(layer_loc);
 }
 

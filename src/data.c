@@ -1164,7 +1164,8 @@ data load_data_attack(char *path, int n, int w, int h, int num_box, int classes,
     d.X.cols = h*w*3;  //一张图片像素数
 
     d.y = make_matrix(n, 5*(num_box));
-
+    
+    //printf("image name: %s\n", path);
     image orig = load_image_color(path, 0, 0);
     image sized = letterbox_image(orig, w, h);
 
@@ -1189,6 +1190,7 @@ data load_data_sequence(char **paths, int n, int w, int h, int boxes, int classe
 
     d.y = make_matrix(n, 5*(boxes));
     for(i = 0; i < n; i++){
+        //printf("image name: %s\n", paths[i]);
         image orig = load_image_color(paths[i], 0, 0);
         image sized = letterbox_image(orig, w, h);
 
