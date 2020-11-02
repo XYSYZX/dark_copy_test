@@ -152,11 +152,9 @@ void forward_yolo_layer(const layer l, network net)
     }
 #endif
     /*
-    if(net.bit_attack){
-        //memcpy(l.delta, l.output, l.outputs*l.batch*sizeof(float));
-        return
-    }
-    */
+    printf("yolo output: \n");
+    for (i = 0; i < l.outputs*l.batch; i++) printf("%f ", l.output[i]);
+    printf("\n");*/
     memset(l.delta, 0, l.outputs * l.batch * sizeof(float)); 
     if(!net.train) return;
     float avg_iou = 0;
@@ -257,7 +255,13 @@ void forward_yolo_layer(const layer l, network net)
         }
     }
         //上面处理完了整个batch中的所有图片
+    /*
+    printf("yolo delta: \n");
+    for (i = 0; i < l.outputs*l.batch; i++) printf("%f ", l.delta[i]);
+    printf("\n");*/
+
     *(l.cost) = pow(mag_array(l.delta, l.outputs * l.batch), 2);
+    //printf("yolo cost: %f\n", *(l.cost));
     //printf("Region %d Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, .5R: %f, .75R: %f,  count: %d\n", net.index, avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, recall75/count, count);
 }
 

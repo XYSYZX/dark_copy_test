@@ -7,8 +7,9 @@ void qsort_with_layer(float *a, int *b, int *c, int l, int r, int reverse);
 
 void heapsort_topk_int_float(int *a, float *b, int *c, int n, int k, int reverse, int *idx, float *val);
 void heapsort_topk_float_int(float *a, int *b, int n, int k, int reverse, int *idx, float *val);
+void heapsort_float_int(float *a, int *b, int len, int reverse);
 void heapsort_topk_with_layer(float *a, int *b, int *c, int n, int k, int reverse, int *lidx, int *idx);
-
+void heapsort_with_layer(float *a, int *b, int *c, int len, int reverse);
 
 
 #endif

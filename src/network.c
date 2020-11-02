@@ -659,19 +659,14 @@ float network_predict_search(network *net, data d)
 
 void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk, int worst)
 {
-#ifdef GPU
-    abs_gpu(x_gpu, x_gpu, length);
-    cuda_pull_array(x_gpu, x, length);
-#else
-    abs_cpu(x, x, length);
-#endif
+    if(x_gpu){
+        abs_gpu(x_gpu, x_gpu, length);
+        cuda_pull_array(x_gpu, x, length);
+    }
+    else abs_cpu(x, x, length);
     int *y = (int *)calloc(length, sizeof(int));
     for(int i = 0; i < length; i++) y[i] = i;
-    //if(worst) qsort_botk_float_int(x, y, 0, length-1, topk-1);
-    //qsort_topk_float_int(x, y, 0, length-1, topk-1, worst);
     heapsort_topk_float_int(x, y, length, topk, worst, idx, val);
-    //for(int i = 0; i < topk; i++) val[i] = x[i];
-    //for(int i = 0; i < topk; i++) idx[i] = y[i];
     free(y);
 }
 
@@ -679,11 +674,15 @@ void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val, 
 {
     int *c = (int *)calloc(length, sizeof(int));
     for(int i = 0; i < length; i++) c[i] = i;
-    //qsort_topk_int_float(a, b, c, 0, length-1, topk-1, worst);
     heapsort_topk_int_float(a, b, c, length, topk, worst, idx, val);
-    //for(int i = 0; i < topk; i++) idx[i] = c[i];
-    //for(int i = 0; i < topk; i++) val[i] = b[i];
+    heapsort_float_int(val, idx, topk, worst);
     free(c);
+}
+
+void get_topk_float(float *a, int *b, int length, int topk, float *val, int *idx, int worst)
+{
+    heapsort_topk_float_int(a, b, length, topk, worst, idx, val);
+    heapsort_float_int(val, idx, topk, worst);
 }
 
 void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y, int worst)
@@ -692,16 +691,26 @@ void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y,
     for(int i = 0; i < length; i++){
         layer_loc[i] = i / topk;
     }
-    //qsort_with_layer(a, b, layer_loc, 0, length-1, worst);
     heapsort_topk_with_layer(a, b, layer_loc, length, topk, worst, x, y);
-    //for(int i = 0; i < topk; i++) x[i] = layer_loc[i];
-    //for(int i = 0; i < topk; i++) y[i] = b[i];
+    heapsort_with_layer(a, x, y, topk, worst);
     free(layer_loc);
+}
+
+void get_same_dist(float *a, int *b, int *c, int len, float *x, int *y, int *z, int k)
+{
+    //int offset = 0;
+    int step = len / k;
+    for(int i = 0; i < k; i++){
+        x[i] = a[i*step];
+        y[i] = b[i*step];
+        z[i] = c[i*step];
+    }
 }
 
 float predict_network_datum(network *net)
 {
     net->train = 1;
+    //printf("start forward\n");
     forward_network(net);
     if(net->attack->sign_attack) backward_network(net);
     float error = *net->cost;

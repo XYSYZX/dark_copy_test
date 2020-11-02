@@ -818,7 +818,9 @@ layer get_network_output_layer(network *net);
 void top_predictions(network *net, int n, int *index);
 void get_topk(float *x, float *x_gpu, int length, int *idx, float *val, int topk, int worst);
 void get_topk_int(int *a, float *b, int length, int topk, int *idx, float *val, int worst);
+void get_topk_float(float *a, int *b, int length, int topk, float *val, int *idx, int worst);
 void get_topk_with_layer(float *a, int *b, int length, int topk, int *x, int *y, int worst);
+void get_same_dist(float *a, int *b, int *c, int len, float *x, int *y, int *z, int k);
 void flip_image(image a);
 image float_to_image(int w, int h, int c, float *data);
 void ghost_image(image source, image dest, int dx, int dy);
@@ -922,7 +924,6 @@ float rand_normal();
 float rand_uniform(float min, float max);
 
 typedef struct attack_args{
-    //network *net;
     int layer_num;
     int iter;
     int layer_idx;
@@ -931,33 +932,31 @@ typedef struct attack_args{
     int bit_idx;
 
     int sign_attack;  //FGSM攻击
-    //int progress_attack; //一次攻击好几位
+    int progress_attack; //一次攻击好几位
     float epsilon;    //FGSM攻击因数
     int reverse;      //撤除攻击
     int worst;
+    int dist_fac;     //等间隔因数
 
-    char *avg_log;
+    int avf_type;
+    char *avf_log;
 
     float alpha;  //控制loss和accuracy占avf比例
     float loss_thresh;  //判断loss的阈值
     float acc_thresh;   //判断accurary的阈值
 
-    int a_input;   //attack inputs, 0 or 1
     int a_weight;
     int a_bias;
-    int a_output;
+    int a_filter;
+    int a_layer;
 
     int topk;
-    int topk_input; //num of inputs to be attacked
     int topk_weight;
     int topk_bias;
-    int topk_output;
     int *topks;
-    int *topk_inputs;
     int *topk_weights;
     int *topk_biases;
-    int *topk_outputs;
-    
+
     int *flipped_bit;   //一个数字中要翻转的位数
     int fb_len;        //位数的长度
 
@@ -966,85 +965,104 @@ typedef struct attack_args{
     int n;  //一次看几张图片
 
     int **grads_loc;
-    int **grads_loc_inputs;    //length: 1 * (topk * iter)
     int **grads_loc_weights;   //length: layers * (topk * iter)
     int **grads_loc_biases;
-    int **grads_loc_outputs;
 
     int **grads_loc_min;
-    int **grads_loc_inputs_min;    //length: 1 * (topk * iter)
     int **grads_loc_weights_min;   //length: layers * (topk * iter)
     int **grads_loc_biases_min;
-    int **grads_loc_outputs_min;
 
     float **grads_val;
-    float **grads_val_inputs;    //length: 1 * (topk * iter)
     float **grads_val_weights;   //length: layers * (topk * iter)
     float **grads_val_biases;
-    float **grads_val_outputs;
 
     float **grads_val_min;
-    float **grads_val_inputs_min;    //length: 1 * (topk * iter)
     float **grads_val_weights_min;   //length: layers * (topk * iter)
     float **grads_val_biases_min;
-    float **grads_val_outputs_min;
 
     int **mloss_loc;
-    int **mloss_loc_inputs;   //长度: 2 * (topk*2), layer_idx1, ;layer_idx2, ...layer_idxk, idx1, idx2, ...idx_k
-    int **mloss_loc_weights; //长度: 2 * (topk*2)
-    int **mloss_loc_outputs; //长度同上
+    int **mloss_loc_weights; //长度: 2 * (topk*2), layer_idx1, ;layer_idx2, ...layer_idxk, idx1, idx2, ...idx_k
     int **mloss_loc_biases;
 
     float *mloss;
-    float *mloss_inputs; //长度: topk*2 * fb_len
     float *mloss_weights; //长度: topk*2 * fb_len
     float *mloss_biases;
-    float *mloss_outputs; //长度同上
 
     float *macc;
-    float *macc_inputs; //长度: topk*2 * fb_len
     float *macc_weights; //长度: topk*2 * fb_len
     float *macc_biases;
-    float *macc_outputs; //长度同上
 
     float *avf;
-    float *avf_inputs; //长度: topk
     float *avf_weights; //长度: topk
     float *avf_biases;
-    float *avf_outputs; //长度同上
 
     int *len;
-    int *inputs_len;    //length: 1
     int *weights_len;   //length: layer num
     int *biases_len;
-    int *outputs_len;
 
     float **grads;
     float **grads_gpu;
-    float **input_grads;    //length: 1*1
-    float **input_grads_gpu;
     float **weight_grads;   //length: layer num*1
     float **weight_grads_gpu;
     float **bias_grads;
     float **bias_grads_gpu;
-    float **output_grads;
-    float **output_grads_gpu;
 
     float **x;
     float **x_gpu;
-    float **inputs;     //length: 1*1
-    float **inputs_gpu;
     float **weights;    //length: layer num*1
     float **weights_gpu;
     float **biases;
     float **biases_gpu;
-    float **outputs;
-    float **outputs_gpu;
+
+//filter attack
+    int *flt_len;   //len: l.n
+    int *flt_size;  //len: l.c*l.size*l.size
+    int *flt_layer_idx; //len: all filters
+
+    int topk_flt;
+    int *topks_flt;
+    
+    float **grads_val_flt;  //len: layers * (topk * iter)
+    float **grads_val_flt_min;  //len: layers * (topk * iter)
+
+    int **grads_loc_flt;        //length: layers * (topk * iter)
+    int **grads_loc_flt_min;   //length: layers * (topk * iter)
+
+    int **mloss_loc_flt;      //2 * (topk*2)or(topk)
+    float *mloss_flt;         //(topk*2)or(topk) * fb_len
+    float *macc_flt;          //(topk*2)or(topk) * fb_len
+    float *avf_flt; //len: (topk*2)or(topk)
+
+//layer attack
+    int *l_len;   //len: l.n
+
+    int topk_l;
+    int *topks_l;
+
+    int all_weight;
+    int all_bias;
+
+    float *grads_val_l;  //len: (topk)
+
+    int *grads_loc_l;        //length: (topk)
+    int *grads_loc_layer_l;        //length: (topk)
+
+    int **mloss_loc_l;
+    float *macc_l;   //layer*topk*fb_len
+    float *mloss_l;  //layer*topk*fb_len
+    float *avf_l;    //layer*topk
+
+//function
+    //void (*attack_data) (network *, load_args, load_args);
+    void (*get_topk_grad)  (attack_args *);
+    void (*get_max_loss)  (attack_args *);
+    //void (*get_avf)  (network *, load_args, int, FILE *);
+    void (*single_attack)  (network *);
+    
 } attack_args;
 
 void attack_data(network *net, load_args args, load_args val_args);
 //void progressive_attack(network *net);
-void single_attack(network *net);
 #ifdef __cplusplus
 }
 #endif

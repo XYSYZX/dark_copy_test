@@ -113,11 +113,11 @@ __global__ void single_bit_flip_float_onebit_kernel(float *w_gpu, int length, in
     unsigned int new_b;
     unsigned int *p;
     p = (unsigned int *)(&w_gpu[idx]);
-    //printf("value before: %x\n", *p);
+    //printf("before: %x ", *p);
     new_b = b << bit_idx;
     //printf("chang b to: %d\n", new_b);
     (*p) = (*p)^(new_b);
-    //printf("value after: %x\n", *p);
+    //printf("after: %x ", *p);
 }
 
 void inject_noise_float_onebit_gpu(float *w_gpu, int idx, int bit_idx)

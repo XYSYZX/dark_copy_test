@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 //#include "darknet.h"
 #include "sort.h"
 
@@ -341,6 +342,19 @@ void heapsort_topk_float_int(float *a, int *b, int n, int k, int reverse, int *i
     }
 }
 
+void heapsort_float_int(float *a, int *b, int len, int reverse)
+{
+    int i;
+    float swap;
+    for(i = (len>>1)-1; i>=0; i--) reverse? down_topk_float_int(a, b, i, len): up_topk_float_int(a, b, i, len);
+    for(i = len-1; i > 0; i--){
+        swap = a[0];
+        a[0] = a[i];
+        a[i] = swap;
+        reverse? down_topk_float_int(a, b, 0, i): up_topk_float_int(a, b, 0, i);
+    }
+}
+
 void down_topk_with_layer(float *a, int *b, int *c, int n, int k)  //从大到小
 {
     int root = n;  //根结点索引
@@ -420,9 +434,23 @@ void heapsort_topk_with_layer(float *a, int *b, int *c, int n, int k, int revers
             reverse? down_topk_with_layer(res, idx, lidx, 0, k): up_topk_with_layer(res, idx, lidx, 0, k);
         }
     }
-    printf("max/min layer value\n");
-    for(i = 0; i < k; i++) printf("%f ", res[i]);
-    printf("\n");
+    for(i = 0; i < k; i++) a[i] = res[i];
     free(res);
 }
 
+void heapsort_with_layer(float *a, int *b, int *c, int len, int reverse)
+{
+    int i;
+    float swap;
+    for(i = (len>>1)-1; i>=0; i--) reverse? down_topk_with_layer(a, b, c, i, len): up_topk_with_layer(a, b, c, i, len);
+    for(i = len-1; i > 0; i--){
+        swap = a[0];
+        a[0] = a[i];
+        a[i] = swap;
+        reverse? down_topk_with_layer(a, b, c, 0, i): up_topk_with_layer(a, b, c, 0, i);
+    }
+    /*
+    printf("max/min layer value\n");
+    for(i = 0; i < len; i++) printf("%f ", a[i]);
+    printf("\n");*/
+}

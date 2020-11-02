@@ -899,12 +899,12 @@ network *parse_network_cfg(char *filename)  //get filename as param, parse netwo
     net->output = out.output;
     net->input = calloc(net->inputs*net->batch, sizeof(float));
     net->truth = calloc(net->truths*net->batch, sizeof(float));
-    net->delta = calloc(net->inputs*net->batch, sizeof(float));
+    //net->delta = calloc(net->inputs*net->batch, sizeof(float));
 #ifdef GPU
     net->output_gpu = out.output_gpu;
     net->input_gpu = cuda_make_array(net->input, net->inputs*net->batch);
     net->truth_gpu = cuda_make_array(net->truth, net->truths*net->batch);
-    net->delta_gpu = cuda_make_array(net->delta, net->inputs*net->batch);
+    //net->delta_gpu = cuda_make_array(net->delta, net->inputs*net->batch);
 #endif
     if(workspace_size){
         printf("%ld\n", workspace_size);

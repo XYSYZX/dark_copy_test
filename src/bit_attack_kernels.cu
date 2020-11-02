@@ -14,14 +14,10 @@ __global__ void sign_attacker_kernel(float *x, float *grad, int n, float epsilon
     else *x = *x;
 }
 
-void sign_attacker_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon)
+void sign_attacker_gpu(float *x_gpu, float *grad_gpu, int idx, float epsilon)
 {
     //printf("attack sign gpu!\n");
-    int i, idx;
-    for(i = 0; i < topk; i++){
-        idx = loc[i];
-        sign_attacker_kernel<<<1, 1>>>(&x_gpu[idx], &grad_gpu[idx], 1, epsilon);
-    }
+    sign_attacker_kernel<<<1, 1>>>(&x_gpu[idx], &grad_gpu[idx], 1, epsilon);
 }
 __global__ void sign_delete_kernel(float *x, float *grad, int n, float epsilon)
 {
@@ -32,23 +28,13 @@ __global__ void sign_delete_kernel(float *x, float *grad, int n, float epsilon)
     else *x = *x;
 }
 
-void sign_delete_gpu(float *x_gpu, int *loc, int topk, float *grad_gpu, float epsilon)
+void sign_delete_gpu(float *x_gpu, float *grad_gpu, int idx, float epsilon)
 {
     //printf("delete sign gpu!\n");
-    int i, idx;
-    for(i = 0; i < topk; i++){
-        idx = loc[i];
-        sign_delete_kernel<<<1, 1>>>(&x_gpu[idx], &grad_gpu[idx], 1, epsilon);
-    }
+    sign_delete_kernel<<<1, 1>>>(&x_gpu[idx], &grad_gpu[idx], 1, epsilon);
 }
 
-void bit_flip_attacker_gpu(attack_args a)
+void bit_flip_attacker_gpu(float *x_gpu, int idx, int bit_idx)
 {
-    int layer_idx = a.mloss_loc[0][a.k_idx];
-    int idx = a.mloss_loc[1][a.k_idx];
-    float *x = a.x_gpu[layer_idx];
-    int bit_idx = a.bit_idx;
-    inject_noise_float_onebit_gpu(x, idx, bit_idx);
+    inject_noise_float_onebit_gpu(x_gpu, idx, bit_idx);
 }
-
-
